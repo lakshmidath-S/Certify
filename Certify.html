@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate DApp (Base Sepolia)</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+        }
+
+        button {
+            padding: 10px 20px;
+            margin: 10px 0;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            font-size: 14px;
+            margin: 10px 0;
+        }
+
+        #output {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h2>Decentralized Certificate Verification</h2>
+
+    <!-- Certificate Hash Input -->
+    <input type="text" id="hashInput" placeholder="Enter certificate hash (bytes32)"
+        value="0x6f1ed002ab5595859014ebf0951522d9c41f49bdebbd3c2c0e9e7aeb5f1a5a45" />
+
+    <br>
+
+    <!-- Buttons -->
+    <button onclick="connectWallet()">Connect Wallet</button><br>
+    <button onclick="issueCertificate()">Issue Certificate</button><br>
+    <button onclick="verifyCertificate()">Verify Certificate</button>
+
+    <div id="output"></div>
+
+    <script>
+        let provider;
+        let signer;
+        let contract;
+
+        // 🔴 PASTE YOUR DEPLOYED CONTRACT ADDRESS HERE
+        const contractAddress = "0x21f71CE9cf04a89D166aF29489Ca52A09629e096";
+
+        // ABI (only required functions)
+        const contractABI = [
+            "function issueCertificate(bytes32 certHash)",
+            "function verifyCertificate(bytes32 certHash) view returns (bool, address, uint256)"
+        ];
+
+        async function connectWallet() {
+            if (!window.ethereum) {
+                alert("MetaMask not detected");
+                return;
+            }
+
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            await provider.send("eth_requestAccounts", []);
+
+            signer = provider.getSigner();
+            contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+            document.getElementById("output").innerText =
+                "Wallet connected: " + await signer.getAddress();
+        }
+
+        async function issueCertificate() {
+            try {
+                const hash = document.getElementById("hashInput").value;
+
+                const tx = await contract.issueCertificate(hash);
+                document.getElementById("output").innerText =
+                    "Transaction sent. Waiting for confirmation...";
+
+                await tx.wait();
+
+                document.getElementById("output").innerText =
+                    "✅ Certificate issued successfully!";
+            } catch (err) {
+                document.getElementById("output").innerText =
+                    "❌ Error: " + err.message;
+            }
+        }
+
+        async function verifyCertificate() {
+            try {
+                const hash = document.getElementById("hashInput").value;
+
+                const result = await contract.verifyCertificate(hash);
+
+                const valid = result[0];
+                const issuer = result[1];
+                const timestamp = result[2];
+
+                if (valid) {
+                    document.getElementById("output").innerText =
+                        `✅ VALID\nIssuer: ${issuer}\nIssued At: ${new Date(Number(timestamp) * 1000)}`;
+                } else {
+                    document.getElementById("output").innerText =
+                        "❌ INVALID CERTIFICATE";
+                }
+            } catch (err) {
+                document.getElementById("output").innerText =
+                    "❌ Error: " + err.message;
+            }
+        }
+    </script>
+
+</body>
+
+</html>
