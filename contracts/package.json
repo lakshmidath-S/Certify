@@ -1,0 +1,20 @@
+{
+  "name": "certify-contracts",
+  "version": "1.0.0",
+  "description": "CERTIFY blockchain smart contracts",
+  "main": "index.js",
+  "scripts": {
+    "test": "hardhat test",
+    "compile": "hardhat compile",
+    "deploy:wallet": "hardhat run scripts/deploy-wallet-registry.js",
+    "deploy:cert": "hardhat run scripts/deploy-certificate-registry.js"
+  },
+  "keywords": ["blockchain", "certificates", "hardhat", "solidity"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^4.0.0",
+    "hardhat": "^2.19.4",
+    "dotenv": "^16.3.1"
+  }
+}
