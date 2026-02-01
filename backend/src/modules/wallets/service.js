@@ -8,7 +8,7 @@ async function mapWallet(userId, walletAddress, adminSigner) {
         await client.query('BEGIN');
 
         const existingWallet = await client.query(
-            'SELECT id FROM wallets WHERE wallet_address = $1',
+            'SELECT id FROM wallets WHERE "walletAddress" = $1',
             [walletAddress]
         );
 
@@ -19,14 +19,14 @@ async function mapWallet(userId, walletAddress, adminSigner) {
         const blockchainResult = await mapWalletOnChain(walletAddress, adminSigner);
 
         const result = await client.query(
-            `INSERT INTO wallets (wallet_address, user_id, mapped_tx_hash, is_active)
-       VALUES ($1, $2, $3, true)
+            `INSERT INTO wallets ("walletAddress", "userId", "mappedTxHash")
+       VALUES ($1, $2, $3)
        RETURNING *`,
             [walletAddress, userId, blockchainResult.txHash]
         );
 
         await client.query(
-            `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, result, metadata)
+            `INSERT INTO audit_logs ("userId", action, "resourceType", "resourceId", result, metadata)
        VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 userId,
@@ -56,7 +56,7 @@ async function revokeWallet(walletAddress, revokedBy, reason, adminSigner) {
         await client.query('BEGIN');
 
         const wallet = await client.query(
-            'SELECT * FROM wallets WHERE wallet_address = $1 AND is_active = true',
+            'SELECT * FROM wallets WHERE "walletAddress" = $1',
             [walletAddress]
         );
 
@@ -68,19 +68,19 @@ async function revokeWallet(walletAddress, revokedBy, reason, adminSigner) {
 
         await client.query(
             `UPDATE wallets
-       SET is_active = false, revoked_at = CURRENT_TIMESTAMP, revoked_tx_hash = $1
-       WHERE wallet_address = $2`,
+       SET "revokedAt" = CURRENT_TIMESTAMP, "revokedTxHash" = $1
+       WHERE "walletAddress" = $2`,
             [blockchainResult.txHash, walletAddress]
         );
 
         await client.query(
-            `INSERT INTO revocations (revocation_type, wallet_id, revoked_by, reason, blockchain_tx_hash)
+            `INSERT INTO revocations ("revocationType", "walletId", "revokedBy", reason, "blockchainTxHash")
        VALUES ($1, $2, $3, $4, $5)`,
             ['WALLET', wallet.rows[0].id, revokedBy, reason, blockchainResult.txHash]
         );
 
         await client.query(
-            `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, result, metadata)
+            `INSERT INTO audit_logs ("userId", action, "resourceType", "resourceId", result, metadata)
        VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 revokedBy,
@@ -105,10 +105,10 @@ async function revokeWallet(walletAddress, revokedBy, reason, adminSigner) {
 
 async function getWalletByAddress(walletAddress) {
     const result = await db.query(
-        `SELECT w.*, u.email, u.first_name, u.last_name
+        `SELECT w.*, u.email, u."firstName", u."lastName"
      FROM wallets w
-     JOIN users u ON w.user_id = u.id
-     WHERE w.wallet_address = $1`,
+     JOIN users u ON w."userId" = u.id
+     WHERE w."walletAddress" = $1`,
         [walletAddress]
     );
 
@@ -117,7 +117,7 @@ async function getWalletByAddress(walletAddress) {
 
 async function getWalletsByUserId(userId) {
     const result = await db.query(
-        'SELECT * FROM wallets WHERE user_id = $1 ORDER BY created_at DESC',
+        'SELECT * FROM wallets WHERE "userId" = $1 ORDER BY "createdAt" DESC',
         [userId]
     );
 

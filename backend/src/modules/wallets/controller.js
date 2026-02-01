@@ -28,10 +28,10 @@ async function mapWallet(req, res) {
             success: true,
             wallet: {
                 id: wallet.id,
-                walletAddress: wallet.wallet_address,
-                userId: wallet.user_id,
-                txHash: wallet.mapped_tx_hash,
-                mappedAt: wallet.mapped_at
+                walletAddress: wallet.walletAddress,
+                userId: wallet.userId,
+                txHash: wallet.mappedTxHash,
+                mappedAt: wallet.createdAt
             }
         });
     } catch (error) {
@@ -94,12 +94,11 @@ async function getWallet(req, res) {
             success: true,
             wallet: {
                 id: wallet.id,
-                walletAddress: wallet.wallet_address,
-                userId: wallet.user_id,
+                walletAddress: wallet.walletAddress,
+                userId: wallet.userId,
                 userEmail: wallet.email,
-                isActive: wallet.is_active,
-                mappedAt: wallet.mapped_at,
-                revokedAt: wallet.revoked_at
+                mappedAt: wallet.createdAt,
+                revokedAt: wallet.revokedAt
             }
         });
     } catch (error) {
@@ -119,10 +118,9 @@ async function getUserWallets(req, res) {
             success: true,
             wallets: wallets.map(w => ({
                 id: w.id,
-                walletAddress: w.wallet_address,
-                isActive: w.is_active,
-                mappedAt: w.mapped_at,
-                revokedAt: w.revoked_at
+                walletAddress: w.walletAddress,
+                mappedAt: w.createdAt,
+                revokedAt: w.revokedAt
             }))
         });
     } catch (error) {

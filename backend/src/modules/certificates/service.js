@@ -33,7 +33,7 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
         } = certificateData;
 
         const issuerWalletResult = await client.query(
-            'SELECT * FROM wallets WHERE id = $1 AND user_id = $2 AND is_active = true',
+            'SELECT * FROM wallets WHERE id = $1 AND "userId" = $2',
             [issuerWalletFromToken.walletId, issuerId]
         );
 
@@ -43,11 +43,11 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
 
         const issuerWallet = issuerWalletResult.rows[0];
 
-        if (issuerWallet.wallet_address.toLowerCase() !== issuerWalletFromToken.address.toLowerCase()) {
+        if (issuerWallet.walletAddress.toLowerCase() !== issuerWalletFromToken.address.toLowerCase()) {
             throw new Error('Wallet address mismatch');
         }
 
-        const isValidOnChain = await isIssuerValidOnChain(issuerWallet.wallet_address);
+        const isValidOnChain = await isIssuerValidOnChain(issuerWallet.walletAddress);
         if (!isValidOnChain) {
             throw new Error('Issuer wallet revoked or invalid on blockchain');
         }
@@ -59,12 +59,12 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
             ownerEmail,
             courseName,
             issuerId,
-            issuerWallet: issuerWallet.wallet_address,
+            issuerWallet: issuerWallet.walletAddress,
             issuedAt
         });
 
         const existingCert = await client.query(
-            'SELECT id FROM certificates WHERE certificate_hash = $1',
+            'SELECT id FROM certificates WHERE "certificateHash" = $1',
             [hash]
         );
 
@@ -77,12 +77,12 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
         const qrBuffer = await generateQR(hash);
 
         const issuerUserResult = await client.query(
-            'SELECT first_name, last_name FROM users WHERE id = $1',
+            'SELECT "firstName", "lastName" FROM users WHERE id = $1',
             [issuerId]
         );
 
         const issuerName = issuerUserResult.rows[0]
-            ? `${issuerUserResult.rows[0].first_name} ${issuerUserResult.rows[0].last_name}`
+            ? `${issuerUserResult.rows[0].firstName} ${issuerUserResult.rows[0].lastName}`
             : 'Issuer';
 
         const pdfBuffer = await generatePDF({
@@ -130,7 +130,7 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
         );
 
         await client.query(
-            `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, result, metadata)
+            `INSERT INTO audit_logs ("userId", action, "resourceType", "resourceId", result, metadata)
        VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 issuerId,
@@ -154,7 +154,7 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
         await client.query('ROLLBACK');
 
         await client.query(
-            `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, result, error_message)
+            `INSERT INTO audit_logs ("userId", action, "resourceType", "resourceId", result, "errorMessage")
        VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 certificateData.issuerId,

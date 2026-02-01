@@ -55,7 +55,7 @@ async function createIssuer(adminUserId, issuerData) {
     // Store institution metadata (you may want a separate institutions table)
     // For now, we'll use audit logs to track this
     await db.query(
-        `INSERT INTO audit_logs (user_id, action, resource_type, result, metadata)
+        `INSERT INTO audit_logs ("userId", action, "resourceType", result, metadata)
      VALUES ($1, 'ISSUER_CREATED', 'USER', 'SUCCESS', $2)`,
         [
             user.id,
@@ -90,12 +90,12 @@ async function listIssuers(adminUserId) {
     }
 
     const issuers = await db.query(
-        `SELECT u.id, u.email, u.first_name as institution_name, u.is_active, u.created_at,
-            w.wallet_address, w.is_active as wallet_active
+        `SELECT u.id, u.email, u."firstName" as institution_name, u."createdAt",
+            w."walletAddress"
      FROM users u
-     LEFT JOIN wallets w ON u.id = w.user_id
+     LEFT JOIN wallets w ON u.id = w."userId"
      WHERE u.role = 'ISSUER'
-     ORDER BY u.created_at DESC`
+     ORDER BY u."createdAt" DESC`
     );
 
     return issuers.rows;

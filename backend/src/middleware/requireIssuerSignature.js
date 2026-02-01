@@ -51,7 +51,7 @@ async function requireIssuerSignature(req, res, next) {
         }
 
         const walletResult = await db.query(
-            'SELECT * FROM wallets WHERE wallet_address = $1 AND user_id = $2 AND is_active = true',
+            'SELECT * FROM wallets WHERE \"walletAddress\" = $1 AND \"userId\" = $2',
             [decoded.walletAddress, decoded.userId]
         );
 

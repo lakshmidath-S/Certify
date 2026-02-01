@@ -123,7 +123,7 @@ async function completeRegistration(email, password, firstName, lastName) {
 
     // Log registration
     await db.query(
-        `INSERT INTO audit_logs (user_id, action, resource_type, result)
+        `INSERT INTO audit_logs (\"userId\", action, \"resourceType\", result)
      VALUES ($1, 'STUDENT_REGISTERED', 'USER', 'SUCCESS')`,
         [user.id]
     );

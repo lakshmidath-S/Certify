@@ -71,7 +71,7 @@ async function verifySignature(walletAddress, signature, message) {
     }
 
     const walletResult = await db.query(
-        'SELECT user_id FROM wallets WHERE wallet_address = $1 AND is_active = true',
+        'SELECT "userId" FROM wallets WHERE "walletAddress" = $1',
         [normalizedAddress]
     );
 
@@ -79,7 +79,7 @@ async function verifySignature(walletAddress, signature, message) {
         throw new Error('Wallet not mapped or inactive');
     }
 
-    const userId = walletResult.rows[0].user_id;
+    const userId = walletResult.rows[0].userId;
 
     const userResult = await db.query(
         'SELECT id, email, role FROM users WHERE id = $1',
@@ -111,7 +111,7 @@ async function verifySignature(walletAddress, signature, message) {
     await db.query('DELETE FROM wallet_challenges WHERE wallet_address = $1', [normalizedAddress]);
 
     await db.query(
-        `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, result, metadata)
+        `INSERT INTO audit_logs ("userId", action, "resourceType", "resourceId", result, metadata)
      VALUES ($1, $2, $3, $4, $5, $6)`,
         [
             userId,
