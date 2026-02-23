@@ -5,7 +5,7 @@ const db = require('../../db/pool');
 const { generateCertificateHash } = require('./hash');
 const { generateQR } = require('./qr');
 const { generatePDF } = require('./pdf');
-const { storeCertificateHashOnChain, isIssuerValidOnChain } = require('../../config/blockchain');
+const { isIssuerValidOnChain } = require('../../config/blockchain');
 
 const STORAGE_DIR = path.join(__dirname, '../../../storage/certificates');
 

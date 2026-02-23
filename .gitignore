@@ -2,9 +2,6 @@
 .env
 .env.local
 .env.*.local
-backend/.env
-frontend/.env
-contracts/.env
 
 # ===== Dependencies (large, regeneratable via npm install) =====
 node_modules/

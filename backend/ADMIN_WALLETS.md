@@ -27,7 +27,7 @@ Use the automated script that handles both blockchain and database operations:
 
 ```bash
 cd backend
-node add-admin-wallet.js
+node scripts/add-admin-wallet.js
 ```
 
 **What it does:**
@@ -204,7 +204,7 @@ Or use SQL:
 
 **Cause**: Wallet not mapped on WalletRegistry contract
 
-**Solution**: Run `add-admin-wallet.js` script or manually map on blockchain
+**Solution**: Run `node scripts/add-admin-wallet.js` or manually map on blockchain
 
 ### "Wallet already mapped"
 
@@ -232,7 +232,7 @@ Or use SQL:
 ```bash
 # 1. Run the script
 cd backend
-node add-admin-wallet.js
+node scripts/add-admin-wallet.js
 
 # 2. Enter details when prompted
 Enter new admin wallet address: 0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb
