@@ -1,21 +1,14 @@
 const fs = require('fs').promises;
 const certificateService = require('./service');
-const { ethers } = require('ethers');
 
-async function issueCertificate(req, res) {
+async function prepareCertificate(req, res) {
     try {
-        const {
-            ownerName,
-            ownerEmail,
-            courseName,
-            ownerId,
-            issuerPrivateKey
-        } = req.body;
+        const { ownerName, ownerEmail, courseName } = req.body;
 
-        if (!ownerName || !courseName || !ownerId || !issuerPrivateKey) {
+        if (!ownerName || !courseName) {
             return res.status(400).json({
                 success: false,
-                error: 'Required fields: ownerName, courseName, ownerId, issuerPrivateKey'
+                error: 'Required fields: ownerName, courseName'
             });
         }
 
@@ -26,13 +19,42 @@ async function issueCertificate(req, res) {
             });
         }
 
-        const { provider } = require('../../config/blockchain');
-        const issuerSigner = new ethers.Wallet(issuerPrivateKey, provider);
+        const result = await certificateService.prepareCertificate({
+            ownerName,
+            ownerEmail,
+            courseName,
+            issuerId: req.user.id,
+        }, req.issuerWallet);
 
-        if (issuerSigner.address.toLowerCase() !== req.issuerWallet.address.toLowerCase()) {
+        res.json({
+            success: true,
+            hash: result.hash,
+            nonce: result.nonce,
+        });
+    } catch (error) {
+        console.error('Prepare certificate error:', error);
+        res.status(400).json({
+            success: false,
+            error: error.message
+        });
+    }
+}
+
+async function issueCertificate(req, res) {
+    try {
+        const { ownerName, ownerEmail, courseName, hash, txHash } = req.body;
+
+        if (!ownerName || !courseName || !hash || !txHash) {
+            return res.status(400).json({
+                success: false,
+                error: 'Required fields: ownerName, courseName, hash, txHash'
+            });
+        }
+
+        if (!req.issuerWallet) {
             return res.status(403).json({
                 success: false,
-                error: 'Private key does not match signed wallet address'
+                error: 'Issuer wallet signature required'
             });
         }
 
@@ -40,9 +62,9 @@ async function issueCertificate(req, res) {
             ownerName,
             ownerEmail,
             courseName,
+            hash,
             issuerId: req.user.id,
-            ownerId
-        }, issuerSigner, req.issuerWallet);
+        }, txHash, req.issuerWallet);
 
         res.status(201).json({
             success: true,
@@ -57,13 +79,10 @@ async function issueCertificate(req, res) {
         let statusCode = 400;
         let errorMessage = error.message;
 
-        if (error.message.includes('not mapped')) {
-            statusCode = 403;
-        } else if (error.message.includes('revoked')) {
-            statusCode = 403;
-        } else if (error.message.includes('Duplicate')) {
-            statusCode = 409;
-        } else if (error.message.includes('blockchain') || error.message.includes('chain')) {
+        if (error.message.includes('not mapped')) statusCode = 403;
+        else if (error.message.includes('revoked')) statusCode = 403;
+        else if (error.message.includes('Duplicate')) statusCode = 409;
+        else if (error.message.includes('blockchain') || error.message.includes('chain')) {
             statusCode = 502;
             errorMessage = 'Blockchain transaction failed';
         } else if (error.message.includes('PDF') || error.message.includes('QR')) {
@@ -179,8 +198,44 @@ async function downloadCertificate(req, res) {
     }
 }
 
+async function getIssuedCertificates(req, res) {
+    try {
+        const { limit = 50, offset = 0 } = req.query;
+
+        const certificates = await certificateService.getCertificatesByIssuer(
+            req.user.id,
+            parseInt(limit),
+            parseInt(offset)
+        );
+
+        res.json({
+            success: true,
+            count: certificates.length,
+            certificates: certificates.map(c => ({
+                id: c.id,
+                hash: c.certificate_hash,
+                certificateNumber: c.certificate_number,
+                recipientName: c.recipient_name,
+                recipientEmail: c.recipient_email,
+                courseName: c.course_name,
+                issueDate: c.issue_date,
+                txHash: c.blockchain_tx_hash,
+                createdAt: c.created_at
+            }))
+        });
+    } catch (error) {
+        console.error('Get issued certificates error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to get issued certificates'
+        });
+    }
+}
+
 module.exports = {
+    prepareCertificate,
     issueCertificate,
     getMyCertificates,
+    getIssuedCertificates,
     downloadCertificate
 };

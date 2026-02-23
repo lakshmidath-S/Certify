@@ -67,13 +67,40 @@ async function login(req, res) {
 
         res.json({
             success: true,
-            accessToken: result.token,
+            accessToken: result.accessToken,
             user: result.user
         });
     } catch (error) {
         console.error('Login error:', error);
         res.status(401).json({
             success: false,
+            error: error.message
+        });
+    }
+}
+
+async function verifyAdminWallet(req, res) {
+    try {
+        const { walletAddress } = req.body;
+
+        if (!walletAddress) {
+            return res.status(400).json({
+                success: false,
+                error: 'Wallet address is required'
+            });
+        }
+
+        const result = authService.verifyAdminWallet(walletAddress);
+
+        res.json({
+            success: true,
+            allowed: result.allowed
+        });
+    } catch (error) {
+        console.error('Admin wallet verification error:', error);
+        res.status(403).json({
+            success: false,
+            allowed: false,
             error: error.message
         });
     }
@@ -111,8 +138,38 @@ async function getProfile(req, res) {
     }
 }
 
+async function verifyIssuerWallet(req, res) {
+    try {
+        const { walletAddress } = req.body;
+
+        if (!walletAddress) {
+            return res.status(400).json({
+                success: false,
+                error: 'Wallet address is required'
+            });
+        }
+
+        const result = await authService.verifyIssuerWallet(walletAddress, req.user.id);
+
+        res.json({
+            success: true,
+            verified: true,
+            walletId: result.walletId
+        });
+    } catch (error) {
+        console.error('Issuer wallet verification error:', error);
+        res.status(403).json({
+            success: false,
+            verified: false,
+            error: error.message
+        });
+    }
+}
+
 module.exports = {
     register,
     login,
+    verifyAdminWallet,
+    verifyIssuerWallet,
     getProfile
 };

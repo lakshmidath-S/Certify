@@ -3,6 +3,23 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- Wallet challenges table (for wallet auth signature flow)
+CREATE TABLE wallet_challenges (
+    wallet_address VARCHAR(42) PRIMARY KEY,
+    nonce VARCHAR(36) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Student OTP table (for student registration flow)
+CREATE TABLE student_otp (
+    email VARCHAR(255) PRIMARY KEY,
+    otp VARCHAR(6) NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Users table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

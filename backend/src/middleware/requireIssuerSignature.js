@@ -51,7 +51,7 @@ async function requireIssuerSignature(req, res, next) {
         }
 
         const walletResult = await db.query(
-            'SELECT * FROM wallets WHERE \"walletAddress\" = $1 AND \"userId\" = $2',
+            'SELECT * FROM wallets WHERE LOWER(wallet_address) = LOWER($1) AND user_id = $2 AND revoked_at IS NULL',
             [decoded.walletAddress, decoded.userId]
         );
 

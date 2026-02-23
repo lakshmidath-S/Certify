@@ -15,6 +15,16 @@ export const authAPI = {
         const response = await apiClient.get('/auth/profile');
         return response.data;
     },
+
+    verifyAdminWallet: async (walletAddress) => {
+        const response = await apiClient.post('/auth/verify-admin-wallet', { walletAddress });
+        return response.data;
+    },
+
+    verifyIssuerWallet: async (walletAddress) => {
+        const response = await apiClient.post('/auth/verify-issuer-wallet', { walletAddress });
+        return response.data;
+    },
 };
 
 export const walletAuthAPI = {
@@ -34,20 +44,18 @@ export const walletAuthAPI = {
 };
 
 export const walletAPI = {
-    mapWallet: async (walletAddress, userId, adminPrivateKey) => {
+    mapWallet: async (walletAddress, userId) => {
         const response = await apiClient.post('/wallets/map', {
             walletAddress,
             userId,
-            adminPrivateKey,
         });
         return response.data;
     },
 
-    revokeWallet: async (walletAddress, reason, adminPrivateKey) => {
+    revokeWallet: async (walletAddress, reason) => {
         const response = await apiClient.post('/wallets/revoke', {
             walletAddress,
             reason,
-            adminPrivateKey,
         });
         return response.data;
     },
@@ -64,8 +72,18 @@ export const walletAPI = {
 };
 
 export const certificateAPI = {
+    prepareCertificate: async (certificateData) => {
+        const response = await apiClient.post('/certificates/prepare', certificateData);
+        return response.data;
+    },
+
     issueCertificate: async (certificateData) => {
         const response = await apiClient.post('/certificates/issue', certificateData);
+        return response.data;
+    },
+
+    getIssuedCertificates: async (limit = 50, offset = 0) => {
+        const response = await apiClient.get(`/certificates/issued?limit=${limit}&offset=${offset}`);
         return response.data;
     },
 

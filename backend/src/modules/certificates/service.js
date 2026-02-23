@@ -17,7 +17,41 @@ async function ensureStorageDir() {
     }
 }
 
-async function issueCertificate(certificateData, issuerSigner, issuerWalletFromToken) {
+async function prepareCertificate(certificateData, issuerWalletFromToken) {
+    const { ownerName, ownerEmail, courseName, issuerId } = certificateData;
+
+    // Verify issuer wallet
+    const walletResult = await db.query(
+        'SELECT * FROM wallets WHERE id = $1 AND user_id = $2',
+        [issuerWalletFromToken.walletId, issuerId]
+    );
+
+    if (walletResult.rows.length === 0) {
+        throw new Error('Issuer wallet not found or inactive');
+    }
+
+    const issuerWallet = walletResult.rows[0];
+
+    const isValidOnChain = await isIssuerValidOnChain(issuerWallet.wallet_address);
+    if (!isValidOnChain) {
+        throw new Error('Issuer wallet revoked or invalid on blockchain');
+    }
+
+    const issuedAt = new Date().toISOString();
+
+    const { hash, nonce } = generateCertificateHash({
+        ownerName,
+        ownerEmail,
+        courseName,
+        issuerId,
+        issuerWallet: issuerWallet.wallet_address,
+        issuedAt
+    });
+
+    return { hash, nonce, issuedAt };
+}
+
+async function issueCertificate(certificateData, txHash, issuerWalletFromToken) {
     const client = await db.getClient();
 
     try {
@@ -29,11 +63,23 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
             ownerEmail,
             courseName,
             issuerId,
-            ownerId
         } = certificateData;
 
+        // Look up the owner (student) by email — must be a registered OWNER
+        if (!ownerEmail) {
+            throw new Error('Student email is required');
+        }
+        const ownerResult = await client.query(
+            'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+            [ownerEmail]
+        );
+        if (ownerResult.rows.length === 0) {
+            throw new Error(`No registered student found with email: ${ownerEmail}. The student must register first.`);
+        }
+        const ownerId = ownerResult.rows[0].id;
+
         const issuerWalletResult = await client.query(
-            'SELECT * FROM wallets WHERE id = $1 AND "userId" = $2',
+            'SELECT * FROM wallets WHERE id = $1 AND user_id = $2',
             [issuerWalletFromToken.walletId, issuerId]
         );
 
@@ -43,28 +89,15 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
 
         const issuerWallet = issuerWalletResult.rows[0];
 
-        if (issuerWallet.walletAddress.toLowerCase() !== issuerWalletFromToken.address.toLowerCase()) {
-            throw new Error('Wallet address mismatch');
-        }
-
-        const isValidOnChain = await isIssuerValidOnChain(issuerWallet.walletAddress);
-        if (!isValidOnChain) {
-            throw new Error('Issuer wallet revoked or invalid on blockchain');
-        }
-
         const issuedAt = new Date().toISOString();
 
-        const { hash, nonce } = generateCertificateHash({
-            ownerName,
-            ownerEmail,
-            courseName,
-            issuerId,
-            issuerWallet: issuerWallet.walletAddress,
-            issuedAt
-        });
+        // Use the hash from prepare step (already stored on-chain)
+        // DO NOT regenerate - the nonce is random so it would produce a different hash
+        const hash = certificateData.hash;
+        const nonce = uuidv4();
 
         const existingCert = await client.query(
-            'SELECT id FROM certificates WHERE "certificateHash" = $1',
+            'SELECT id FROM certificates WHERE certificate_hash = $1',
             [hash]
         );
 
@@ -72,17 +105,15 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
             throw new Error('Duplicate certificate hash');
         }
 
-        const blockchainResult = await storeCertificateHashOnChain(hash, issuerSigner);
-
         const qrBuffer = await generateQR(hash);
 
         const issuerUserResult = await client.query(
-            'SELECT "firstName", "lastName" FROM users WHERE id = $1',
+            'SELECT first_name, last_name FROM users WHERE id = $1',
             [issuerId]
         );
 
         const issuerName = issuerUserResult.rows[0]
-            ? `${issuerUserResult.rows[0].firstName} ${issuerUserResult.rows[0].lastName}`
+            ? `${issuerUserResult.rows[0].first_name} ${issuerUserResult.rows[0].last_name}`
             : 'Issuer';
 
         const pdfBuffer = await generatePDF({
@@ -117,7 +148,7 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
                 issuerId,
                 ownerId,
                 issuerWallet.id,
-                blockchainResult.txHash,
+                txHash,
                 nonce,
                 Date.now()
             ]
@@ -130,7 +161,7 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
         );
 
         await client.query(
-            `INSERT INTO audit_logs ("userId", action, "resourceType", "resourceId", result, metadata)
+            `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, result, metadata)
        VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 issuerId,
@@ -138,7 +169,7 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
                 'CERTIFICATE',
                 certificateId,
                 'SUCCESS',
-                JSON.stringify({ hash, txHash: blockchainResult.txHash })
+                JSON.stringify({ hash, txHash })
             ]
         );
 
@@ -147,14 +178,14 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
         return {
             certificateId,
             hash,
-            txHash: blockchainResult.txHash,
+            txHash,
             certificate: certResult.rows[0]
         };
     } catch (error) {
         await client.query('ROLLBACK');
 
         await client.query(
-            `INSERT INTO audit_logs ("userId", action, "resourceType", "resourceId", result, "errorMessage")
+            `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, result, error_message)
        VALUES ($1, $2, $3, $4, $5, $6)`,
             [
                 certificateData.issuerId,
@@ -222,9 +253,25 @@ async function getCertificateFilePath(certificateId) {
     return result.rows[0]?.file_path;
 }
 
+async function getCertificatesByIssuer(issuerId, limit = 50, offset = 0) {
+    const result = await db.query(
+        `SELECT c.*, o.email as owner_email, o.first_name as owner_first_name, o.last_name as owner_last_name
+     FROM certificates c
+     LEFT JOIN users o ON c.owner_id = o.id
+     WHERE c.issuer_id = $1
+     ORDER BY c.created_at DESC
+     LIMIT $2 OFFSET $3`,
+        [issuerId, limit, offset]
+    );
+
+    return result.rows;
+}
+
 module.exports = {
+    prepareCertificate,
     issueCertificate,
     getCertificatesByOwner,
+    getCertificatesByIssuer,
     getCertificateById,
     getCertificateFilePath
 };

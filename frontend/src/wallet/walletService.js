@@ -105,4 +105,29 @@ export const walletService = {
             window.ethereum.on('chainChanged', callback);
         }
     },
+
+    async storeCertificateHash(hash) {
+        if (!window.ethereum) {
+            throw new Error('MetaMask is not installed');
+        }
+
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+
+        const CERT_REGISTRY_ADDRESS = '0xb5B043baC7e5F734862Dcc9De25f6cc2bf171Ce9';
+        const CERT_REGISTRY_ABI = [
+            'function storeCertificateHash(bytes32 hash) external',
+        ];
+
+        const contract = new ethers.Contract(CERT_REGISTRY_ADDRESS, CERT_REGISTRY_ABI, signer);
+
+        const hashBytes32 = '0x' + hash;
+        const tx = await contract.storeCertificateHash(hashBytes32);
+        const receipt = await tx.wait();
+
+        return {
+            txHash: receipt.hash,
+            blockNumber: receipt.blockNumber,
+        };
+    },
 };

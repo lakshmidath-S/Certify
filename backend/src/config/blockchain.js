@@ -22,6 +22,11 @@ const CertificateRegistryABI = [
 
 const provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
 
+// Server-side admin signer — uses DEPLOYER_PRIVATE_KEY from .env
+const adminSigner = process.env.DEPLOYER_PRIVATE_KEY
+    ? new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, provider)
+    : null;
+
 const walletRegistry = new ethers.Contract(
     config.blockchain.walletRegistryAddress,
     WalletRegistryABI,
@@ -136,6 +141,7 @@ async function verifyCertificateOnChain(hash) {
 
 module.exports = {
     provider,
+    adminSigner,
     walletRegistry,
     certificateRegistry,
     isIssuerValidOnChain,

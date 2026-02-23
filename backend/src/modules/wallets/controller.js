@@ -1,14 +1,15 @@
 const walletService = require('./service');
 const { ethers } = require('ethers');
+const { adminSigner } = require('../../config/blockchain');
 
 async function mapWallet(req, res) {
     try {
-        const { walletAddress, userId, adminPrivateKey } = req.body;
+        const { walletAddress, userId } = req.body;
 
-        if (!walletAddress || !userId || !adminPrivateKey) {
+        if (!walletAddress || !userId) {
             return res.status(400).json({
                 success: false,
-                error: 'Wallet address, user ID, and admin private key are required'
+                error: 'Wallet address and user ID are required'
             });
         }
 
@@ -19,8 +20,12 @@ async function mapWallet(req, res) {
             });
         }
 
-        const { provider } = require('../../config/blockchain');
-        const adminSigner = new ethers.Wallet(adminPrivateKey, provider);
+        if (!adminSigner) {
+            return res.status(500).json({
+                success: false,
+                error: 'Server admin signer not configured. Check DEPLOYER_PRIVATE_KEY in .env'
+            });
+        }
 
         const wallet = await walletService.mapWallet(userId, walletAddress, adminSigner);
 
@@ -28,10 +33,10 @@ async function mapWallet(req, res) {
             success: true,
             wallet: {
                 id: wallet.id,
-                walletAddress: wallet.walletAddress,
-                userId: wallet.userId,
-                txHash: wallet.mappedTxHash,
-                mappedAt: wallet.createdAt
+                walletAddress: wallet.wallet_address,
+                userId: wallet.user_id,
+                txHash: wallet.mapped_tx_hash,
+                mappedAt: wallet.created_at
             }
         });
     } catch (error) {
@@ -45,17 +50,21 @@ async function mapWallet(req, res) {
 
 async function revokeWallet(req, res) {
     try {
-        const { walletAddress, reason, adminPrivateKey } = req.body;
+        const { walletAddress, reason } = req.body;
 
-        if (!walletAddress || !reason || !adminPrivateKey) {
+        if (!walletAddress || !reason) {
             return res.status(400).json({
                 success: false,
-                error: 'Wallet address, reason, and admin private key are required'
+                error: 'Wallet address and reason are required'
             });
         }
 
-        const { provider } = require('../../config/blockchain');
-        const adminSigner = new ethers.Wallet(adminPrivateKey, provider);
+        if (!adminSigner) {
+            return res.status(500).json({
+                success: false,
+                error: 'Server admin signer not configured. Check DEPLOYER_PRIVATE_KEY in .env'
+            });
+        }
 
         const result = await walletService.revokeWallet(
             walletAddress,
@@ -94,11 +103,11 @@ async function getWallet(req, res) {
             success: true,
             wallet: {
                 id: wallet.id,
-                walletAddress: wallet.walletAddress,
-                userId: wallet.userId,
+                walletAddress: wallet.wallet_address,
+                userId: wallet.user_id,
                 userEmail: wallet.email,
-                mappedAt: wallet.createdAt,
-                revokedAt: wallet.revokedAt
+                mappedAt: wallet.created_at,
+                revokedAt: wallet.revoked_at
             }
         });
     } catch (error) {
@@ -118,9 +127,9 @@ async function getUserWallets(req, res) {
             success: true,
             wallets: wallets.map(w => ({
                 id: w.id,
-                walletAddress: w.walletAddress,
-                mappedAt: w.createdAt,
-                revokedAt: w.revokedAt
+                walletAddress: w.wallet_address,
+                mappedAt: w.created_at,
+                revokedAt: w.revoked_at
             }))
         });
     } catch (error) {

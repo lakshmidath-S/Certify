@@ -39,8 +39,8 @@ async function createIssuer(adminUserId, issuerData) {
 
     // Create issuer user
     const userResult = await db.query(
-        `INSERT INTO users (email, password_hash, first_name, last_name, role, is_active)
-     VALUES ($1, $2, $3, $4, 'ISSUER', true)
+        `INSERT INTO users (email, password_hash, first_name, last_name, role, status)
+     VALUES ($1, $2, $3, $4, 'ISSUER', 'ACTIVE')
      RETURNING id, email, role`,
         [
             officialEmail.toLowerCase(),
@@ -52,10 +52,9 @@ async function createIssuer(adminUserId, issuerData) {
 
     const user = userResult.rows[0];
 
-    // Store institution metadata (you may want a separate institutions table)
-    // For now, we'll use audit logs to track this
+    // Store institution metadata
     await db.query(
-        `INSERT INTO audit_logs ("userId", action, "resourceType", result, metadata)
+        `INSERT INTO audit_logs (user_id, action, resource_type, result, metadata)
      VALUES ($1, 'ISSUER_CREATED', 'USER', 'SUCCESS', $2)`,
         [
             user.id,
@@ -90,12 +89,12 @@ async function listIssuers(adminUserId) {
     }
 
     const issuers = await db.query(
-        `SELECT u.id, u.email, u."firstName" as institution_name, u."createdAt",
-            w."walletAddress"
+        `SELECT u.id, u.email, u.first_name as institution_name, u.created_at,
+            w.wallet_address
      FROM users u
-     LEFT JOIN wallets w ON u.id = w."userId"
+     LEFT JOIN wallets w ON u.id = w.user_id
      WHERE u.role = 'ISSUER'
-     ORDER BY u."createdAt" DESC`
+     ORDER BY u.created_at DESC`
     );
 
     return issuers.rows;

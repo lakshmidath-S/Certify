@@ -99,8 +99,8 @@ async function completeRegistration(email, password, firstName, lastName) {
 
     // Create user with OWNER role
     const userResult = await db.query(
-        `INSERT INTO users (email, password_hash, first_name, last_name, role, is_active)
-     VALUES ($1, $2, $3, $4, 'OWNER', true)
+        `INSERT INTO users (email, password_hash, first_name, last_name, role, status)
+     VALUES ($1, $2, $3, $4, 'OWNER', 'ACTIVE')
      RETURNING id, email, first_name, last_name, role`,
         [email.toLowerCase(), hashedPassword, firstName, lastName]
     );
@@ -123,7 +123,7 @@ async function completeRegistration(email, password, firstName, lastName) {
 
     // Log registration
     await db.query(
-        `INSERT INTO audit_logs (\"userId\", action, \"resourceType\", result)
+        `INSERT INTO audit_logs (user_id, action, resource_type, result)
      VALUES ($1, 'STUDENT_REGISTERED', 'USER', 'SUCCESS')`,
         [user.id]
     );

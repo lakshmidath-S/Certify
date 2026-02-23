@@ -49,7 +49,7 @@ async function login(email, password) {
 
     const user = result.rows[0];
 
-    if (user.status && user.status !== 'active') {
+    if (user.status && user.status.toUpperCase() !== 'ACTIVE') {
         throw new Error('Account is not active');
     }
 
@@ -59,7 +59,7 @@ async function login(email, password) {
         throw new Error('Invalid credentials');
     }
 
-    const token = jwt.sign(
+    const accessToken = jwt.sign(
         {
             userId: user.id,
             email: user.email,
@@ -70,7 +70,7 @@ async function login(email, password) {
     );
 
     return {
-        token,
+        accessToken,
         user: {
             id: user.id,
             email: user.email,
@@ -95,5 +95,35 @@ async function getUserById(userId) {
 module.exports = {
     register,
     login,
+    verifyAdminWallet,
+    verifyIssuerWallet,
     getUserById
 };
+
+function verifyAdminWallet(walletAddress) {
+    const adminWallet = process.env.ADMIN_WALLET_ADDRESS;
+    if (!adminWallet) {
+        throw new Error('Admin wallet not configured on server');
+    }
+    const allowed = walletAddress.toLowerCase() === adminWallet.toLowerCase();
+    if (!allowed) {
+        throw new Error('This wallet is not authorized as admin');
+    }
+    return { allowed: true };
+}
+
+async function verifyIssuerWallet(walletAddress, userId) {
+    console.log('Verifying issuer wallet:', { walletAddress, userId });
+    const result = await db.query(
+        'SELECT id, wallet_address, user_id FROM wallets WHERE LOWER(wallet_address) = LOWER($1) AND user_id = $2 AND revoked_at IS NULL',
+        [walletAddress, userId]
+    );
+
+    console.log('Wallet query result rows:', result.rows.length);
+
+    if (result.rows.length === 0) {
+        throw new Error('This wallet is not mapped to your account or has been revoked');
+    }
+
+    return { walletId: result.rows[0].id, verified: true };
+}
