@@ -18,7 +18,7 @@ async function query(text, params) {
         const duration = Date.now() - start;
 
         if (config.server.env === 'development') {
-            console.log('Executed query', { text, duration, rows: res.rowCount });
+            // console.log('Executed query', { text, duration, rows: res.rowCount });
         }
 
         return res;

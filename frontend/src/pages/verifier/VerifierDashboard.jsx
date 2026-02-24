@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { ChevronLeft } from 'lucide-react';
 import { verificationAPI } from '../../api';
 import { StatusBadge } from '../../components/StatusBadge';
 
@@ -39,149 +40,153 @@ export default function VerifierDashboard() {
         }
     };
 
-
     return (
-        <div className="min-h-screen bg-gray-100">
-            <nav className="bg-white shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex items-center">
-                            <h1 className="text-2xl font-bold text-blue-600">CERTIFY</h1>
-                            <span className="ml-4 text-gray-600">Verifier Dashboard</span>
-                        </div>
-                        <div className="flex items-center">
-                            <button
-                                onClick={() => navigate('/')}
-                                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800"
-                            >
-                                ← Back to Home
-                            </button>
-                        </div>
+        <div className="min-h-screen text-white font-sans selection:bg-white/30">
+            {/* Background elements handled via index.css globally */}
+            <div className="absolute inset-0 pointer-events-none overflow-hidden h-full">
+                <div className="absolute top-[20%] right-[-10%] w-[40%] h-[40%] bg-white/[0.02] rounded-full blur-[100px]"></div>
+            </div>
+
+            {/* Floating Navbar */}
+            <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-5xl px-4">
+                <div className="mx-auto flex items-center justify-between rounded-full border border-white/[0.08] bg-[#0A0A0A]/60 px-6 py-3 backdrop-blur-md shadow-[0_4px_24px_rgba(0,0,0,0.4)]">
+                    <div className="flex items-center gap-3">
+                        <Link to="/" className="flex items-center gap-3 cursor-pointer">
+                            <div className="h-6 w-6 rounded-full bg-white flex items-center justify-center">
+                                <span className="text-black font-bold text-xs">C</span>
+                            </div>
+                            <span className="text-lg font-semibold tracking-tight">CERTIFY</span>
+                        </Link>
+                        <span className="text-[#A1A1A1] mx-2">/</span>
+                        <span className="text-sm font-medium text-[#A1A1A1]">Verifier</span>
+                    </div>
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => navigate('/')}
+                            className="text-sm font-medium text-[#A1A1A1] hover:text-white transition-colors flex items-center"
+                        >
+                            <ChevronLeft className="mr-1 w-4 h-4 stroke-[2]" /> Back to Home
+                        </button>
                     </div>
                 </div>
             </nav>
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="space-y-6">
-                    <div className="bg-white shadow rounded-lg p-6">
-                        <h2 className="text-xl font-semibold mb-4">Bulk Certificate Verification</h2>
+            <main className="relative z-10 mx-auto max-w-6xl px-4 pt-48 pb-24">
+                <div className="text-center mb-12 animate-fade-in-up">
+                    <div className="inline-flex items-center rounded-full border border-white/[0.08] bg-[#111111]/40 px-3 py-1.5 text-sm text-[#A1A1A1] mb-6 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                        <span className="flex h-2 w-2 rounded-full bg-emerald-500 mr-2"></span>
+                        Blockchain Verification Engine
+                    </div>
+                    <h1 className="text-4xl md:text-5xl font-semibold tracking-tighter mb-4 text-white">
+                        Bulk Certificate Verification
+                    </h1>
+                </div>
 
-                        {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
-                                {error}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+
+                    {/* Input Section */}
+                    <div className="lg:col-span-4 space-y-6">
+                        <div className="bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                            {error && (
+                                <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-2xl text-sm mb-6">
+                                    {error}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleVerify} className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-medium text-[#A1A1A1] mb-3">
+                                        Certificate Hashes
+                                    </label>
+                                    <textarea
+                                        value={hashes}
+                                        onChange={(e) => setHashes(e.target.value)}
+                                        className="w-full px-4 py-4 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700 font-mono text-xs resize-none"
+                                        rows="12"
+                                        placeholder="Enter certificate hashes here...&#10;One per line.&#10;e.g. 0xabc...&#10;0xdef..."
+                                        required
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    disabled={loading}
+                                    className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                                >
+                                    {loading ? 'Verifying...' : 'Verify Certificates'}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    {/* Results Section */}
+                    <div className="lg:col-span-8 space-y-8">
+                        {summary && (
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                <div className="bg-gradient-to-br from-[#111111] to-[#0A0A0A] p-6 rounded-[24px] border border-white/[0.08] text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                                    <div className="text-3xl font-semibold text-white mb-1">{summary.total}</div>
+                                    <div className="text-sm text-[#A1A1A1]">Total</div>
+                                </div>
+                                <div className="bg-emerald-500/5 p-6 rounded-[24px] border border-emerald-500/20 text-center shadow-[inset_0_1px_0_rgba(16,185,129,0.1)]">
+                                    <div className="text-3xl font-semibold text-emerald-400 mb-1">{summary.valid}</div>
+                                    <div className="text-sm text-emerald-500/70">Valid</div>
+                                </div>
+                                <div className="bg-red-500/5 p-6 rounded-[24px] border border-red-500/20 text-center shadow-[inset_0_1px_0_rgba(239,68,68,0.1)]">
+                                    <div className="text-3xl font-semibold text-red-400 mb-1">{summary.invalid}</div>
+                                    <div className="text-sm text-red-500/70">Invalid</div>
+                                </div>
+                                <div className="bg-yellow-500/5 p-6 rounded-[24px] border border-yellow-500/20 text-center shadow-[inset_0_1px_0_rgba(245,158,11,0.1)]">
+                                    <div className="text-3xl font-semibold text-yellow-400 mb-1">{summary.notFound}</div>
+                                    <div className="text-sm text-yellow-500/70">Not Found</div>
+                                </div>
                             </div>
                         )}
 
-                        <form onSubmit={handleVerify} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Certificate Hashes (one per line)
-                                </label>
-                                <textarea
-                                    value={hashes}
-                                    onChange={(e) => setHashes(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    rows="10"
-                                    placeholder="Enter certificate hashes, one per line..."
-                                    required
-                                />
-                            </div>
+                        {results.length > 0 && (
+                            <div className="bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] overflow-hidden">
+                                <h3 className="text-lg font-semibold mb-6 text-white">Verification Results</h3>
 
-                            <button
-                                type="submit"
-                                disabled={loading}
-                                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                            >
-                                {loading ? 'Verifying...' : 'Verify Certificates'}
-                            </button>
-                        </form>
-                    </div>
-
-                    {summary && (
-                        <div className="bg-white shadow rounded-lg p-6">
-                            <h3 className="text-lg font-semibold mb-4">Verification Summary</h3>
-                            <div className="grid grid-cols-4 gap-4">
-                                <div className="bg-gray-50 p-4 rounded">
-                                    <div className="text-2xl font-bold text-gray-900">{summary.total}</div>
-                                    <div className="text-sm text-gray-600">Total</div>
-                                </div>
-                                <div className="bg-green-50 p-4 rounded">
-                                    <div className="text-2xl font-bold text-green-600">{summary.valid}</div>
-                                    <div className="text-sm text-gray-600">Valid</div>
-                                </div>
-                                <div className="bg-red-50 p-4 rounded">
-                                    <div className="text-2xl font-bold text-red-600">{summary.invalid}</div>
-                                    <div className="text-sm text-gray-600">Invalid</div>
-                                </div>
-                                <div className="bg-yellow-50 p-4 rounded">
-                                    <div className="text-2xl font-bold text-yellow-600">{summary.notFound}</div>
-                                    <div className="text-sm text-gray-600">Not Found</div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
-
-                    {results.length > 0 && (
-                        <div className="bg-white shadow rounded-lg p-6">
-                            <h3 className="text-lg font-semibold mb-4">Verification Results</h3>
-
-                            <div className="overflow-x-auto">
-                                <table className="min-w-full divide-y divide-gray-200">
-                                    <thead className="bg-gray-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Hash
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Status
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Valid
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Message
-                                            </th>
-                                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Certificate Info
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-gray-200">
-                                        {results.map((result, index) => (
-                                            <tr key={index}>
-                                                <td className="px-6 py-4 text-sm font-mono text-gray-900">
-                                                    {result.hash.substring(0, 16)}...
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap">
-                                                    <StatusBadge status={result.status} />
-                                                </td>
-                                                <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                    {result.valid ? (
-                                                        <span className="text-green-600">✓</span>
-                                                    ) : (
-                                                        <span className="text-red-600">✗</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-500">
-                                                    {result.message}
-                                                </td>
-                                                <td className="px-6 py-4 text-sm text-gray-500">
-                                                    {result.certificate && (
-                                                        <div>
-                                                            <div>{result.certificate.recipientName}</div>
-                                                            <div className="text-xs text-gray-400">
-                                                                {result.certificate.courseName}
-                                                            </div>
-                                                        </div>
-                                                    )}
-                                                </td>
+                                <div className="overflow-x-auto">
+                                    <table className="min-w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-white/[0.08]">
+                                                <th className="px-4 py-3 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Hash</th>
+                                                <th className="px-4 py-3 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Status</th>
+                                                <th className="px-4 py-3 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Result</th>
+                                                <th className="px-4 py-3 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Details</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-white/[0.04]">
+                                            {results.map((result, index) => (
+                                                <tr key={index} className="hover:bg-white/[0.02] transition-colors">
+                                                    <td className="px-4 py-4 text-xs font-mono text-[#A1A1A1]">
+                                                        {result.hash.substring(0, 16)}...
+                                                    </td>
+                                                    <td className="px-4 py-4 whitespace-nowrap">
+                                                        <StatusBadge status={result.status} />
+                                                    </td>
+                                                    <td className="px-4 py-4 whitespace-nowrap">
+                                                        {result.valid ? (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 text-xs font-medium border border-emerald-500/20">VALID</span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2 py-1 rounded bg-red-500/10 text-red-400 text-xs font-medium border border-red-500/20">INVALID</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-4 py-4 text-sm text-[#A1A1A1]">
+                                                        <div className="font-medium text-white mb-1">{result.message}</div>
+                                                        {result.certificate && (
+                                                            <div className="text-xs">
+                                                                <span className="text-white">{result.certificate.recipientName}</span> • {result.certificate.courseName}
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+                    </div>
                 </div>
             </main>
         </div>

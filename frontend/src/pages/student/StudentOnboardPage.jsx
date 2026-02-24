@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { GraduationCap, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
 
 const API_BASE = 'http://localhost:3000/api';
@@ -97,60 +98,69 @@ export default function StudentOnboardPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center px-4">
-            <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
-                <div className="text-center mb-8">
-                    <div className="text-6xl mb-4">🎓</div>
-                    <h1 className="text-3xl font-bold text-gray-900">Student Onboarding</h1>
-                    <p className="text-gray-600 mt-2">First-time access for certificate owners</p>
+        <div className="min-h-screen text-white font-sans flex items-center justify-center px-4 overflow-hidden selection:bg-white/30">
+            {/* Background elements handled via index.css globally */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[40%] h-[40%] bg-white/[0.02] rounded-full blur-[100px]"></div>
+            </div>
+
+            <div className="relative z-10 max-w-md w-full bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-md p-10 animate-fade-in-up">
+                <div className="text-center mb-8 flex flex-col items-center">
+                    <div className="mb-6 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                        <GraduationCap className="w-6 h-6 text-white stroke-[1.5]" />
+                    </div>
+                    <h1 className="text-3xl font-semibold tracking-tight text-white">Student Onboarding</h1>
+                    <p className="text-[#A1A1A1] mt-3 font-normal">First-time access for certificate owners</p>
                 </div>
 
-                <div className="mb-6">
+                <div className="mb-8">
                     <div className="flex items-center justify-between">
-                        <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
+                        <div className={`flex items-center ${step >= 1 ? 'text-white' : 'text-[#A1A1A1]'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 1 ? 'bg-white text-black border-white' : 'bg-[#111111] border-white/[0.08]'}`}>
                                 1
                             </div>
-                            <span className="ml-2 text-sm">Email</span>
+                            <span className="ml-3 text-sm font-medium">Email</span>
                         </div>
-                        <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
+                        <div className="flex-1 h-px bg-white/[0.08] mx-4"></div>
+                        <div className={`flex items-center ${step >= 2 ? 'text-white' : 'text-[#A1A1A1]'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 2 ? 'bg-white text-black border-white' : 'bg-[#111111] border-white/[0.08]'}`}>
                                 2
                             </div>
-                            <span className="ml-2 text-sm">Verify</span>
+                            <span className="ml-3 text-sm font-medium">Verify</span>
                         </div>
-                        <div className={`flex items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
+                        <div className="flex-1 h-px bg-white/[0.08] mx-4"></div>
+                        <div className={`flex items-center ${step >= 3 ? 'text-white' : 'text-[#A1A1A1]'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 3 ? 'bg-white text-black border-white' : 'bg-[#111111] border-white/[0.08]'}`}>
                                 3
                             </div>
-                            <span className="ml-2 text-sm">Complete</span>
+                            <span className="ml-3 text-sm font-medium">Complete</span>
                         </div>
                     </div>
                 </div>
 
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-2xl text-sm mb-6">
                         {error}
                     </div>
                 )}
 
                 {message && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-2xl text-sm mb-6">
                         {message}
                     </div>
                 )}
 
                 {step === 1 && (
-                    <form onSubmit={handleRequestOTP} className="space-y-4">
+                    <form onSubmit={handleRequestOTP} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
                                 University Email
                             </label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
                                 placeholder="student@university.edu"
                                 required
                             />
@@ -159,7 +169,7 @@ export default function StudentOnboardPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                            className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                         >
                             {loading ? 'Sending OTP...' : 'Send Verification Code'}
                         </button>
@@ -167,27 +177,27 @@ export default function StudentOnboardPage() {
                 )}
 
                 {step === 2 && (
-                    <form onSubmit={handleVerifyOTP} className="space-y-4">
+                    <form onSubmit={handleVerifyOTP} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2 text-center w-full">
                                 Enter 6-digit OTP
                             </label>
                             <input
                                 type="text"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest"
+                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all text-center text-3xl tracking-[0.5em] font-light"
                                 placeholder="000000"
                                 maxLength="6"
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">Check your email: {email}</p>
+                            <p className="text-xs text-zinc-500 mt-3 text-center">Check your email: <span className="text-zinc-300">{email}</span></p>
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                            className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                         >
                             {loading ? 'Verifying...' : 'Verify OTP'}
                         </button>
@@ -195,65 +205,65 @@ export default function StudentOnboardPage() {
                         <button
                             type="button"
                             onClick={() => setStep(1)}
-                            className="w-full text-sm text-gray-600 hover:text-gray-800"
+                            className="w-full text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center justify-center"
                         >
-                            ← Change email
+                            <ChevronLeft className="mr-1 w-4 h-4 stroke-[2]" /> Change email
                         </button>
                     </form>
                 )}
 
                 {step === 3 && (
-                    <form onSubmit={handleCompleteRegistration} className="space-y-4">
+                    <form onSubmit={handleCompleteRegistration} className="space-y-5">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
                                     First Name
                                 </label>
                                 <input
                                     type="text"
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
                                     Last Name
                                 </label>
                                 <input
                                     type="text"
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
                                     required
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
                                 Password
                             </label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
                                 required
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
                                 Confirm Password
                             </label>
                             <input
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
                                 required
                             />
                         </div>
@@ -261,20 +271,20 @@ export default function StudentOnboardPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                            className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)] mt-2"
                         >
                             {loading ? 'Creating account...' : 'Complete Registration'}
                         </button>
                     </form>
                 )}
 
-                <div className="mt-6 text-center space-y-2">
+                <div className="mt-8 text-center space-y-4 pt-6 border-t border-white/[0.08]">
                     <div>
-                        <span className="text-sm text-gray-600">Already registered? </span>
+                        <span className="text-sm text-[#A1A1A1]">Already registered? </span>
                         <button
                             type="button"
                             onClick={() => navigate('/login?role=owner')}
-                            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                            className="text-sm text-white hover:text-gray-300 font-medium transition-colors"
                         >
                             Login here
                         </button>
@@ -282,12 +292,12 @@ export default function StudentOnboardPage() {
                     <div>
                         <button
                             onClick={() => navigate('/')}
-                            className="text-sm text-gray-600 hover:text-gray-800"
+                            className="text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center justify-center w-full"
                         >
-                            ← Back to home
+                            <ChevronLeft className="mr-1 w-4 h-4 stroke-[2]" /> Back to home
                         </button>
                     </div>
-                    <p className="text-xs text-gray-500 pt-2">
+                    <p className="text-xs text-zinc-600 pt-2">
                         Institutions: Contact admin for onboarding
                     </p>
                 </div>

@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
+import { BadgeCheck, GraduationCap, ShieldCheck, Lock, ArrowUpRight, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LoginPage() {
@@ -48,77 +49,85 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center px-4">
-            <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
-                <div className="text-center mb-8">
-                    <div className="text-6xl mb-4">
-                        {role === 'issuer' ? '🏛️' : role === 'owner' ? '👤' : '🔐'}
+        <div className="min-h-screen text-white font-sans flex items-center justify-center px-4 overflow-hidden selection:bg-white/30">
+            {/* Background elements handling via index.css globally */}
+            <div className="absolute inset-0 pointer-events-none">
+                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[40%] h-[40%] bg-white/[0.02] rounded-full blur-[100px]"></div>
+            </div>
+
+            <div className="relative z-10 w-full max-w-md bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-md p-10 animate-fade-in-up">
+                <div className="text-center mb-8 flex flex-col items-center">
+                    <div className="mb-6 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                        {role === 'issuer' ? <BadgeCheck className="w-6 h-6 text-white stroke-[1.5]" /> : role === 'owner' ? <GraduationCap className="w-6 h-6 text-white stroke-[1.5]" /> : role === 'admin' ? <ShieldCheck className="w-6 h-6 text-white stroke-[1.5]" /> : <Lock className="w-6 h-6 text-white stroke-[1.5]" />}
                     </div>
-                    <h1 className="text-3xl font-bold text-gray-900">
-                        {role === 'issuer' ? 'Issuer Login' : role === 'owner' ? 'Student Login' : 'Login'}
+                    <h1 className="text-3xl font-semibold tracking-tight text-white">
+                        {role === 'issuer' ? 'Issuer Login' : role === 'owner' ? 'Student Login' : role === 'admin' ? 'Admin Login' : 'Login'}
                     </h1>
-                    <p className="text-gray-600 mt-2">
+                    <p className="text-[#A1A1A1] mt-3 font-normal">
                         {role === 'issuer' ? 'Issue certificates to students' : role === 'owner' ? 'Login to view and manage your certificates' : 'Blockchain Certificate Platform'}
                     </p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {successMessage && (
-                        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+                        <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-2xl text-sm">
                             {successMessage}
                         </div>
                     )}
 
                     {error && (
-                        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-2xl text-sm">
                             {error}
                         </div>
                     )}
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Email
-                        </label>
-                        <input
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                        />
-                    </div>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                                Email
+                            </label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                placeholder="name@example.com"
+                                required
+                            />
+                        </div>
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Password
-                        </label>
-                        <input
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            required
-                        />
+                        <div>
+                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                                Password
+                            </label>
+                            <input
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                placeholder="••••••••"
+                                required
+                            />
+                        </div>
                     </div>
 
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        className="w-full flex items-center justify-center rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
                     >
-                        {loading ? 'Logging in...' : 'Login'}
+                        {loading ? 'Authenticating...' : <span className="flex items-center">Enter <ArrowUpRight className="ml-2 w-4 h-4 stroke-[2]" /></span>}
                     </button>
                 </form>
 
-
-                <div className="mt-4 text-center space-y-2">
+                <div className="mt-8 text-center space-y-4 pt-6 border-t border-white/[0.08]">
                     {role === 'owner' && (
                         <div>
-                            <span className="text-sm text-gray-600">Don't have an account? </span>
+                            <span className="text-sm text-[#A1A1A1]">Don't have an account? </span>
                             <button
                                 type="button"
                                 onClick={() => navigate('/student-onboard')}
-                                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                                className="text-sm text-white hover:text-gray-300 font-medium transition-colors"
                             >
                                 Register here
                             </button>
@@ -127,9 +136,9 @@ export default function LoginPage() {
                     <div>
                         <button
                             onClick={() => navigate('/')}
-                            className="text-sm text-gray-600 hover:text-gray-800"
+                            className="text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center justify-center w-full"
                         >
-                            ← Back to role selection
+                            <ChevronLeft className="mr-1 w-4 h-4 stroke-[2]" /> Back to role selection
                         </button>
                     </div>
                 </div>

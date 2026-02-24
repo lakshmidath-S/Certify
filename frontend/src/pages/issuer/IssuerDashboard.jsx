@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { CheckCircle, AlertTriangle, RefreshCw, ClipboardList, Check, FileText } from 'lucide-react';
 import { DashboardLayout } from '../../components/DashboardLayout';
 import { walletService } from '../../wallet/walletService';
 import { authAPI, walletAuthAPI, certificateAPI } from '../../api';
@@ -93,7 +94,7 @@ export default function IssuerDashboard() {
             const result = await authAPI.verifyIssuerWallet(address);
             if (result.verified) {
                 setWalletVerified(true);
-                setMessage('✅ Wallet verified!');
+                // Don't show success message for auto-verify
             }
         } catch (err) {
             setWalletVerified(false);
@@ -112,7 +113,7 @@ export default function IssuerDashboard() {
             const verifyResult = await walletAuthAPI.verifySignature(walletAddress, signature, challengeResult.message);
             setSigningToken(verifyResult.signingToken);
             sessionStorage.setItem('signingToken', verifyResult.signingToken);
-            setMessage('✅ Authorized! Token expires in 5 minutes.');
+            setMessage('Authorized! Token expires in 5 minutes.');
         } catch (err) {
             setError(err.response?.data?.error || err.message || 'Authorization failed');
         }
@@ -132,7 +133,7 @@ export default function IssuerDashboard() {
                 courseName,
             });
 
-            setIssueStep('Confirm the blockchain transaction in MetaMask...');
+            setIssueStep('Please sign the transaction in MetaMask...');
             const blockchainResult = await walletService.storeCertificateHash(prepResult.hash);
 
             setIssueStep('Saving certificate record...');
@@ -144,7 +145,7 @@ export default function IssuerDashboard() {
                 txHash: blockchainResult.txHash,
             });
 
-            setMessage(`✅ Certificate issued! ID: ${result.certificateId}`);
+            setMessage(`Certificate issued successfully! ID: ${result.certificateId}`);
             setOwnerName('');
             setOwnerEmail('');
             setCourseName('');
@@ -179,185 +180,225 @@ export default function IssuerDashboard() {
 
     return (
         <DashboardLayout title="Issuer Dashboard">
-            <div className="space-y-6">
+            <div className="space-y-8 animate-fade-in-up">
+
+                {/* Header Section */}
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h1 className="text-3xl font-semibold tracking-tight text-white mb-2">Issuer Workspace</h1>
+                        <p className="text-[#A1A1A1] text-sm">Create, authorize, and issue blockchain-backed certificates.</p>
+                    </div>
+                </div>
+
+                {/* Notifications */}
                 {message && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">{message}</div>
+                    <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-4 py-3 rounded-2xl text-sm flex items-center">
+                        <CheckCircle className="w-4 h-4 mr-2" /> {message}
+                    </div>
                 )}
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">{error}</div>
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-2xl text-sm flex items-center">
+                        <AlertTriangle className="w-4 h-4 mr-2" /> {error}
+                    </div>
                 )}
 
-                {/* Welcome + Progress */}
-                <div className="bg-white shadow rounded-lg p-6">
-                    <h2 className="text-xl font-semibold mb-2">Welcome, Issuer</h2>
-                    <p className="text-sm text-gray-500">Connect & verify your wallet, authorize, then issue certificates.</p>
-                    <div className="mt-4 flex items-center space-x-4">
-                        {[
-                            { n: 1, label: 'Connect', done: isConnected },
-                            { n: 2, label: 'Verify', done: walletVerified },
-                            { n: 3, label: 'Authorize', done: !!signingToken },
-                            { n: 4, label: 'Issue', done: false },
-                        ].map((s, i) => (
-                            <div key={s.n} className="flex items-center space-x-2">
-                                {i > 0 && <div className="w-6 h-px bg-gray-300"></div>}
-                                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${s.done ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}`}>{s.n}</span>
-                                <span className={`text-sm ${s.done ? 'text-green-600' : 'text-gray-400'}`}>{s.label}</span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+                {/* Top Row: Progress Pipeline & Issue Form */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                {/* Step 1: Connect */}
-                <div className="bg-white shadow rounded-lg p-6">
-                    <h2 className="text-lg font-semibold mb-3">Step 1: Connect MetaMask</h2>
-                    {!isConnected ? (
-                        <button onClick={handleConnectWallet} className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-md hover:bg-blue-700 font-medium">🦊 Connect MetaMask</button>
-                    ) : (
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between bg-gray-50 p-3 rounded-md">
+                    {/* Left Column: Progress & Setup */}
+                    <div className="lg:col-span-5 space-y-6">
+
+                        <div className="bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] relative overflow-hidden">
+                            <h2 className="text-lg font-semibold text-white mb-6">Security Workflow</h2>
+
+                            <div className="space-y-6">
+                                {/* Step 1: Connect */}
+                                <div className={`relative pl-8 ${isConnected ? 'opacity-50' : ''}`}>
+                                    <div className={`absolute left-0 top-1 bottom-[-24px] w-px ${isConnected ? 'bg-emerald-500/30' : 'bg-white/[0.08]'}`}></div>
+                                    <div className={`absolute left-[-3.5px] top-1.5 w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-white/[0.2]'}`}></div>
+                                    <div className="mb-2 font-medium text-sm text-white">1. Connect MetaMask</div>
+
+                                    {!isConnected ? (
+                                        <button onClick={handleConnectWallet} className="w-full mt-2 rounded-full bg-white px-6 py-2.5 text-black text-sm font-semibold transition-transform hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                                            Connect Wallet
+                                        </button>
+                                    ) : (
+                                        <div className="text-xs text-[#A1A1A1] mt-1 break-all">
+                                            Connected: {walletAddress}
+                                            <button onClick={handleDisconnect} className="ml-2 text-red-400 hover:text-red-300">Disconnect</button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Step 2: Network / Verify */}
+                                <div className={`relative pl-8 ${isConnected && walletVerified && isNetworkCorrect ? 'opacity-50' : !isConnected ? 'opacity-30 pointer-events-none' : ''}`}>
+                                    <div className={`absolute left-0 top-1 bottom-[-24px] w-px ${walletVerified && isNetworkCorrect ? 'bg-emerald-500/30' : 'bg-white/[0.08]'}`}></div>
+                                    <div className={`absolute left-[-3.5px] top-1.5 w-2 h-2 rounded-full ${isConnected && walletVerified && isNetworkCorrect ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-white/[0.2]'}`}></div>
+                                    <div className="mb-2 font-medium text-sm text-white">2. Network & Verification</div>
+
+                                    {isConnected && (
+                                        <div className="mt-2 space-y-2">
+                                            {!isNetworkCorrect ? (
+                                                <button onClick={handleSwitchNetwork} className="w-full rounded-full bg-yellow-500/10 border border-yellow-500/20 px-6 py-2.5 text-yellow-500 text-sm font-semibold transition-transform hover:scale-105 active:scale-95">
+                                                    Switch to Base Sepolia
+                                                </button>
+                                            ) : !walletVerified ? (
+                                                <button onClick={() => verifyIssuerWallet(walletAddress)} disabled={walletVerifying}
+                                                    className="w-full rounded-full bg-white/[0.04] border border-white/[0.08] px-6 py-2.5 text-white text-sm font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50">
+                                                    {walletVerifying ? 'Verifying on-chain...' : 'Verify Wallet Mapping'}
+                                                </button>
+                                            ) : (
+                                                <div className="text-xs text-emerald-500 flex items-center"><Check className="w-3 h-3 mr-1" /> On Base Sepolia & Mapped</div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Step 3: Authorize */}
+                                <div className={`relative pl-8 ${signingToken ? 'opacity-50' : !walletVerified ? 'opacity-30 pointer-events-none' : ''}`}>
+                                    <div className={`absolute left-[-3.5px] top-1.5 w-2 h-2 rounded-full ${signingToken ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-white/[0.2]'}`}></div>
+                                    <div className="mb-2 font-medium text-sm text-white">3. Authorize Session</div>
+
+                                    {walletVerified && !signingToken && (
+                                        <button onClick={handleAuthorize} className="w-full mt-2 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 rounded-full px-6 py-2.5 text-purple-300 text-sm font-semibold transition-transform hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
+                                            Sign to Authorize
+                                        </button>
+                                    )}
+                                    {signingToken && (
+                                        <div className="text-xs text-emerald-500 mt-1 flex items-center"><Check className="w-3 h-3 mr-1" /> Session active (expires in 5m)</div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Right Column: Issue Form */}
+                    <div className="lg:col-span-7">
+                        <div className={`bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] h-full transition-all duration-300 ${!signingToken ? 'opacity-40 pointer-events-none grayscale-[0.5]' : ''}`}>
+
+                            <div className="flex items-center justify-between mb-8">
+                                <h2 className="text-xl font-semibold text-white">Issue Certificate</h2>
+                                {!signingToken && (
+                                    <span className="text-xs bg-white/[0.08] border border-white/[0.1] px-3 py-1 rounded-full text-[#A1A1A1]">
+                                        Requires Authorization
+                                    </span>
+                                )}
+                            </div>
+
+                            <form onSubmit={handleIssueCertificate} className="space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Student Name *</label>
+                                        <input type="text" value={ownerName} onChange={(e) => setOwnerName(e.target.value)}
+                                            className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700"
+                                            placeholder="Jane Doe" required />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Student Email</label>
+                                        <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)}
+                                            className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700"
+                                            placeholder="jane@example.com" />
+                                    </div>
+                                </div>
+
                                 <div>
-                                    <p className="text-sm text-gray-600">Connected:</p>
-                                    <p className="font-mono text-sm">{walletAddress}</p>
+                                    <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Course / Certificate Name *</label>
+                                    <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)}
+                                        className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700"
+                                        placeholder="Advanced React Development" required />
                                 </div>
-                                <button onClick={handleDisconnect} className="text-sm text-red-600 hover:text-red-800">Disconnect</button>
-                            </div>
-                            {!isNetworkCorrect && (
-                                <button onClick={handleSwitchNetwork} className="w-full bg-yellow-600 text-white py-2 px-4 rounded-md hover:bg-yellow-700">⚠️ Switch to Base Sepolia</button>
-                            )}
-                            {isNetworkCorrect && <p className="text-green-600 text-sm">✓ Connected to Base Sepolia</p>}
+
+                                {issueStep && (
+                                    <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 text-sm text-[#A1A1A1] flex items-center space-x-3">
+                                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin"></div>
+                                        <span className="font-mono text-xs">{issueStep}</span>
+                                    </div>
+                                )}
+
+                                <div className="pt-4 border-t border-white/[0.08]">
+                                    <button type="submit" disabled={loading}
+                                        className="w-full rounded-full bg-white px-6 py-4 text-black font-semibold transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_20px_rgba(255,255,255,0.15)] flex justify-center items-center">
+                                        {loading ? 'Processing Transaction...' : 'Mint onto Blockchain'}
+                                    </button>
+                                </div>
+                            </form>
                         </div>
-                    )}
+                    </div>
                 </div>
 
-                {/* Step 2: Verify */}
-                {isConnected && isNetworkCorrect && !walletVerified && (
-                    <div className="bg-white shadow rounded-lg p-6">
-                        <h2 className="text-lg font-semibold mb-3">Step 2: Verify Your Wallet</h2>
-                        <button onClick={() => verifyIssuerWallet(walletAddress)} disabled={walletVerifying}
-                            className="w-full bg-purple-600 text-white py-2.5 px-4 rounded-md hover:bg-purple-700 disabled:opacity-50 font-medium">
-                            {walletVerifying ? 'Verifying...' : '🔍 Verify Wallet'}
+                {/* Issued Certificates Ledger */}
+                <div className="bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
+                    <div className="flex items-center justify-between mb-6 pb-6 border-b border-white/[0.08]">
+                        <div>
+                            <h2 className="text-xl font-semibold text-white">Issued Ledger</h2>
+                            <p className="text-[#A1A1A1] text-sm mt-1">Historically verifiable records on Base Sepolia</p>
+                        </div>
+                        <button onClick={loadIssuedCertificates} className="text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center gap-1.5 focus:outline-none">
+                            <RefreshCw className="mr-1 w-4 h-4" /> Refresh Ledger
                         </button>
-                    </div>
-                )}
-
-                {walletVerified && (
-                    <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center space-x-3">
-                        <span className="text-2xl">✅</span>
-                        <div>
-                            <p className="font-medium text-green-800">Wallet Verified</p>
-                            <p className="text-sm text-green-600">Mapped to your issuer account.</p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 3: Authorize */}
-                {walletVerified && !signingToken && (
-                    <div className="bg-white shadow rounded-lg p-6">
-                        <h2 className="text-lg font-semibold mb-3">Step 3: Authorize</h2>
-                        <button onClick={handleAuthorize} className="w-full bg-purple-600 text-white py-2.5 px-4 rounded-md hover:bg-purple-700 font-medium">✍️ Authorize with MetaMask</button>
-                    </div>
-                )}
-
-                {signingToken && (
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center space-x-3">
-                        <span className="text-2xl">🔑</span>
-                        <div>
-                            <p className="font-medium text-blue-800">Authorized</p>
-                            <p className="text-sm text-blue-600">Token expires in 5 minutes.</p>
-                        </div>
-                    </div>
-                )}
-
-                {/* Step 4: Issue Certificate */}
-                {signingToken && (
-                    <div className="bg-white shadow rounded-lg p-6">
-                        <h2 className="text-lg font-semibold mb-3">Step 4: Issue Certificate</h2>
-                        <form onSubmit={handleIssueCertificate} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
-                                <input type="text" value={ownerName} onChange={(e) => setOwnerName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Student Email</label>
-                                <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Course / Certificate Name *</label>
-                                <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
-                            </div>
-                            {issueStep && (
-                                <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700 flex items-center space-x-2">
-                                    <span className="animate-spin">⏳</span>
-                                    <span>{issueStep}</span>
-                                </div>
-                            )}
-                            <button type="submit" disabled={loading}
-                                className="w-full bg-blue-600 text-white py-2.5 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium">
-                                {loading ? 'Processing...' : '📜 Issue Certificate'}
-                            </button>
-                        </form>
-                    </div>
-                )}
-
-                {/* Issued Certificates Table */}
-                <div className="bg-white shadow rounded-lg p-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-semibold">Issued Certificates</h2>
-                        <button onClick={loadIssuedCertificates} className="text-sm text-blue-600 hover:text-blue-800">↻ Refresh</button>
                     </div>
 
                     {certsLoading ? (
-                        <p className="text-center text-gray-500 py-4">Loading...</p>
+                        <div className="text-center py-12 text-[#A1A1A1]">
+                            <div className="animate-pulse flex flex-col items-center">
+                                <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin mb-4"></div>
+                                <p>Loading ledger...</p>
+                            </div>
+                        </div>
                     ) : issuedCerts.length === 0 ? (
-                        <p className="text-center text-gray-400 py-4">No certificates issued yet</p>
+                        <div className="text-center py-16 text-[#A1A1A1]">
+                            <div className="mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
+                                <FileText className="w-6 h-6 text-white stroke-[1.5]" />
+                            </div>
+                            <p className="text-white font-medium mb-1">No certificates issued</p>
+                            <p className="text-sm">Use the form above to mint your first credential.</p>
+                        </div>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
+                            <table className="w-full text-left border-collapse min-w-[900px]">
                                 <thead>
-                                    <tr className="border-b text-left text-gray-500 uppercase text-xs">
-                                        <th className="py-3 px-2">Recipient</th>
-                                        <th className="py-3 px-2">Email</th>
-                                        <th className="py-3 px-2">Course</th>
-                                        <th className="py-3 px-2">Certificate Hash</th>
-                                        <th className="py-3 px-2">TX Hash</th>
-                                        <th className="py-3 px-2">Issued</th>
+                                    <tr className="border-b border-white/[0.08] bg-[#111111]/30">
+                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Recipient</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Course</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Certificate Hash</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">TX Hash</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Issued On</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y divide-white/[0.04]">
                                     {issuedCerts.map((cert) => (
-                                        <tr key={cert.id} className="border-b hover:bg-gray-50">
-                                            <td className="py-3 px-2 font-medium">{cert.recipientName}</td>
-                                            <td className="py-3 px-2 text-gray-500">{cert.recipientEmail || '—'}</td>
-                                            <td className="py-3 px-2">{cert.courseName}</td>
-                                            <td className="py-3 px-2 font-mono text-xs">
-                                                <div className="flex items-center space-x-1">
-                                                    <span title={cert.hash}>{truncateHash(cert.hash)}</span>
+                                        <tr key={cert.id} className="hover:bg-white/[0.02] transition-colors group">
+                                            <td className="px-6 py-5 whitespace-nowrap">
+                                                <div className="form-medium text-white">{cert.recipientName}</div>
+                                                <div className="text-xs text-[#A1A1A1] mt-1">{cert.recipientEmail || '—'}</div>
+                                            </td>
+                                            <td className="px-6 py-5 whitespace-nowrap text-sm text-[#A1A1A1]">{cert.courseName}</td>
+                                            <td className="px-6 py-5 whitespace-nowrap font-mono text-xs">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-[#A1A1A1]">{truncateHash(cert.hash)}</span>
                                                     <button onClick={() => copyToClipboard(cert.hash, `hash-${cert.id}`)}
-                                                        className="text-gray-400 hover:text-blue-600 shrink-0" title="Copy full hash">
-                                                        {copiedId === `hash-${cert.id}` ? '✓' : '📋'}
+                                                        className="text-[#A1A1A1] hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy full hash">
+                                                        {copiedId === `hash-${cert.id}` ? <Check className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                                                     </button>
                                                 </div>
                                             </td>
-                                            <td className="py-3 px-2 font-mono text-xs">
+                                            <td className="px-6 py-5 whitespace-nowrap font-mono text-xs">
                                                 {cert.txHash ? (
-                                                    <div className="flex items-center space-x-1">
+                                                    <div className="flex items-center gap-2">
                                                         <a href={`https://sepolia.basescan.org/tx/${cert.txHash}`}
                                                             target="_blank" rel="noopener noreferrer"
-                                                            className="text-blue-600 hover:text-blue-800" title={cert.txHash}>
+                                                            className="text-purple-400 hover:text-purple-300 transition-colors" title={cert.txHash}>
                                                             {truncateHash(cert.txHash)}
                                                         </a>
                                                         <button onClick={() => copyToClipboard(cert.txHash, `tx-${cert.id}`)}
-                                                            className="text-gray-400 hover:text-blue-600 shrink-0" title="Copy TX hash">
-                                                            {copiedId === `tx-${cert.id}` ? '✓' : '📋'}
+                                                            className="text-[#A1A1A1] hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy TX hash">
+                                                            {copiedId === `tx-${cert.id}` ? <Check className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                                                         </button>
                                                     </div>
-                                                ) : '—'}
+                                                ) : <span className="text-[#A1A1A1]">Pending...</span>}
                                             </td>
-                                            <td className="py-3 px-2 text-gray-500">
-                                                {cert.createdAt ? new Date(cert.createdAt).toLocaleDateString() : '—'}
+                                            <td className="px-6 py-5 whitespace-nowrap text-sm text-[#A1A1A1]">
+                                                {cert.createdAt ? new Date(cert.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                                             </td>
                                         </tr>
                                     ))}

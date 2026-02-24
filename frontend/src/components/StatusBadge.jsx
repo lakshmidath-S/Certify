@@ -1,13 +1,13 @@
 export const StatusBadge = ({ status }) => {
-    const colors = {
-        VALID: 'bg-green-100 text-green-800',
-        INVALID: 'bg-red-100 text-red-800',
-        REVOKED: 'bg-yellow-100 text-yellow-800',
-        PENDING: 'bg-blue-100 text-blue-800',
+    const styles = {
+        VALID: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400',
+        INVALID: 'bg-red-500/10 border-red-500/20 text-red-400',
+        REVOKED: 'bg-red-500/10 border-red-500/20 text-red-400', // Making revoked look like invalid for high contrast
+        PENDING: 'bg-blue-500/10 border-blue-500/20 text-blue-400',
     };
 
     return (
-        <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[status] || 'bg-gray-100 text-gray-800'}`}>
+        <span className={`inline-flex items-center px-2.5 py-1 rounded border text-xs font-semibold tracking-wide ${styles[status] || 'bg-white/[0.04] border-white/[0.08] text-[#A1A1A1]'}`}>
             {status}
         </span>
     );
