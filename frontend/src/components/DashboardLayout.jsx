@@ -7,7 +7,7 @@ export const DashboardLayout = ({ children, title }) => {
 
     const handleLogout = () => {
         logout();
-        navigate('/login');
+        navigate('/');
     };
 
     return (

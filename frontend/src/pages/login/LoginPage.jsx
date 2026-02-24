@@ -10,7 +10,7 @@ export default function LoginPage() {
     const [searchParams] = useSearchParams();
     const role = searchParams.get('role');
 
-    const { login } = useAuth();
+    const { login, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const successMessage = location.state?.message;
@@ -23,6 +23,13 @@ export default function LoginPage() {
         try {
             const user = await login(email, password);
 
+            // Check if login role matches user's actual role
+            if (role && user.role.toLowerCase() !== role.toLowerCase()) {
+                // Not the right role, log out to clear the token and throw an error
+                logout();
+                throw new Error(`Unauthorized. Please login through the ${user.role} portal.`);
+            }
+
             const roleRoutes = {
                 ADMIN: '/admin/dashboard',
                 ISSUER: '/issuer/dashboard',
@@ -32,7 +39,9 @@ export default function LoginPage() {
 
             navigate(roleRoutes[user.role] || '/login');
         } catch (err) {
-            setError(err.response?.data?.error || 'Login failed');
+            console.error('Login error full:', err);
+            // Don't redirect on error, just set the error message
+            setError(err.response?.data?.error || err.message || 'Login failed');
         } finally {
             setLoading(false);
         }
@@ -46,10 +55,10 @@ export default function LoginPage() {
                         {role === 'issuer' ? '🏛️' : role === 'owner' ? '👤' : '🔐'}
                     </div>
                     <h1 className="text-3xl font-bold text-gray-900">
-                        {role === 'issuer' ? 'Issuer Login' : role === 'owner' ? 'Owner Login' : 'Login'}
+                        {role === 'issuer' ? 'Issuer Login' : role === 'owner' ? 'Student Login' : 'Login'}
                     </h1>
                     <p className="text-gray-600 mt-2">
-                        {role === 'issuer' ? 'Issue certificates to students' : role === 'owner' ? 'Access your certificates' : 'Blockchain Certificate Platform'}
+                        {role === 'issuer' ? 'Issue certificates to students' : role === 'owner' ? 'Login to view and manage your certificates' : 'Blockchain Certificate Platform'}
                     </p>
                 </div>
 
@@ -102,13 +111,27 @@ export default function LoginPage() {
                 </form>
 
 
-                <div className="mt-4 text-center">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="text-sm text-gray-600 hover:text-gray-800"
-                    >
-                        ← Back to role selection
-                    </button>
+                <div className="mt-4 text-center space-y-2">
+                    {role === 'owner' && (
+                        <div>
+                            <span className="text-sm text-gray-600">Don't have an account? </span>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/student-onboard')}
+                                className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                            >
+                                Register here
+                            </button>
+                        </div>
+                    )}
+                    <div>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="text-sm text-gray-600 hover:text-gray-800"
+                        >
+                            ← Back to role selection
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

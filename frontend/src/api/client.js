@@ -35,7 +35,11 @@ apiClient.interceptors.response.use(
             localStorage.removeItem('token');
             localStorage.removeItem('user');
             sessionStorage.removeItem('signingToken');
-            window.location.href = '/login';
+
+            // Only redirect if we're not already on the login page or home page
+            if (!window.location.pathname.includes('/login') && window.location.pathname !== '/') {
+                window.location.href = '/';
+            }
         }
         return Promise.reject(error);
     }

@@ -269,13 +269,25 @@ export default function StudentOnboardPage() {
                 )}
 
                 <div className="mt-6 text-center space-y-2">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="text-sm text-gray-600 hover:text-gray-800"
-                    >
-                        ← Back to home
-                    </button>
-                    <p className="text-xs text-gray-500">
+                    <div>
+                        <span className="text-sm text-gray-600">Already registered? </span>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/login?role=owner')}
+                            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                        >
+                            Login here
+                        </button>
+                    </div>
+                    <div>
+                        <button
+                            onClick={() => navigate('/')}
+                            className="text-sm text-gray-600 hover:text-gray-800"
+                        >
+                            ← Back to home
+                        </button>
+                    </div>
+                    <p className="text-xs text-gray-500 pt-2">
                         Institutions: Contact admin for onboarding
                     </p>
                 </div>

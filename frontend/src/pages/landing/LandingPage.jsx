@@ -6,9 +6,9 @@ export default function LandingPage() {
     const roles = [
         {
             name: 'Student',
-            description: 'First-time access for certificate owners',
+            description: 'Login or register to access certificates',
             icon: '🎓',
-            action: () => navigate('/student-onboard'),
+            action: () => navigate('/login?role=owner'),
             color: 'from-orange-500 to-red-600',
         },
         {
