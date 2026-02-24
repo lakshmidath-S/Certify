@@ -18,7 +18,12 @@ async function ensureStorageDir() {
 }
 
 async function prepareCertificate(certificateData, issuerWalletFromToken) {
-    const { ownerName, ownerEmail, courseName, issuerId } = certificateData;
+    const {
+        ownerName, ownerEmail, courseName,
+        department, issueMonth, issueYear,
+        graduationMonth, graduationYear,
+        issuerId
+    } = certificateData;
 
     // Verify issuer wallet
     const walletResult = await db.query(
@@ -37,18 +42,19 @@ async function prepareCertificate(certificateData, issuerWalletFromToken) {
         throw new Error('Issuer wallet revoked or invalid on blockchain');
     }
 
-    const issuedAt = new Date().toISOString();
-
     const { hash, nonce } = generateCertificateHash({
         ownerName,
-        ownerEmail,
         courseName,
+        department,
+        issueMonth,
+        issueYear,
+        graduationMonth,
+        graduationYear,
         issuerId,
         issuerWallet: issuerWallet.wallet_address,
-        issuedAt
     });
 
-    return { hash, nonce, issuedAt };
+    return { hash, nonce };
 }
 
 async function issueCertificate(certificateData, txHash, issuerWalletFromToken) {
@@ -62,6 +68,11 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
             ownerName,
             ownerEmail,
             courseName,
+            department,
+            issueMonth,
+            issueYear,
+            graduationMonth,
+            graduationYear,
             issuerId,
         } = certificateData;
 
@@ -119,8 +130,12 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
         const pdfBuffer = await generatePDF({
             ownerName,
             courseName,
+            department,
+            issueMonth,
+            issueYear,
+            graduationMonth,
+            graduationYear,
             issuerName,
-            issuedAt,
             certificateHash: hash
         }, qrBuffer);
 
@@ -130,12 +145,21 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
 
         await fs.writeFile(pdfPath, pdfBuffer);
 
+        // Build additional_info JSON with new standardized fields
+        const additionalInfo = {
+            department: department || null,
+            issueMonth: issueMonth || null,
+            issueYear: issueYear || null,
+            graduationMonth: graduationMonth || null,
+            graduationYear: graduationYear || null,
+        };
+
         const certResult = await client.query(
             `INSERT INTO certificates (
         id, certificate_hash, certificate_number, recipient_name, recipient_email,
         course_name, issue_date, issuer_id, owner_id, issuer_wallet_id,
-        blockchain_tx_hash, nonce, timestamp
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+        blockchain_tx_hash, nonce, timestamp, additional_info
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
       RETURNING *`,
             [
                 certificateId,
@@ -150,7 +174,8 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
                 issuerWallet.id,
                 txHash,
                 nonce,
-                Date.now()
+                Date.now(),
+                JSON.stringify(additionalInfo)
             ]
         );
 

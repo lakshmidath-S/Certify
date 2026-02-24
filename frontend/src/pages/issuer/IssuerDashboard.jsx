@@ -3,6 +3,21 @@ import { DashboardLayout } from '../../components/DashboardLayout';
 import { walletService } from '../../wallet/walletService';
 import { authAPI, walletAuthAPI, certificateAPI } from '../../api';
 
+const MONTHS = [
+    { value: '1', label: 'January' },
+    { value: '2', label: 'February' },
+    { value: '3', label: 'March' },
+    { value: '4', label: 'April' },
+    { value: '5', label: 'May' },
+    { value: '6', label: 'June' },
+    { value: '7', label: 'July' },
+    { value: '8', label: 'August' },
+    { value: '9', label: 'September' },
+    { value: '10', label: 'October' },
+    { value: '11', label: 'November' },
+    { value: '12', label: 'December' },
+];
+
 export default function IssuerDashboard() {
     // Wallet connection state
     const [walletAddress, setWalletAddress] = useState('');
@@ -20,6 +35,11 @@ export default function IssuerDashboard() {
     const [ownerName, setOwnerName] = useState('');
     const [ownerEmail, setOwnerEmail] = useState('');
     const [courseName, setCourseName] = useState('');
+    const [department, setDepartment] = useState('');
+    const [issueMonth, setIssueMonth] = useState('');
+    const [issueYear, setIssueYear] = useState('');
+    const [graduationMonth, setGraduationMonth] = useState('');
+    const [graduationYear, setGraduationYear] = useState('');
 
     // Issued certificates
     const [issuedCerts, setIssuedCerts] = useState([]);
@@ -125,21 +145,26 @@ export default function IssuerDashboard() {
         setLoading(true);
 
         try {
-            setIssueStep('Preparing certificate hash...');
-            const prepResult = await certificateAPI.prepareCertificate({
+            const certData = {
                 ownerName,
                 ownerEmail,
                 courseName,
-            });
+                department,
+                issueMonth,
+                issueYear,
+                graduationMonth,
+                graduationYear,
+            };
+
+            setIssueStep('Preparing certificate hash...');
+            const prepResult = await certificateAPI.prepareCertificate(certData);
 
             setIssueStep('Confirm the blockchain transaction in MetaMask...');
             const blockchainResult = await walletService.storeCertificateHash(prepResult.hash);
 
             setIssueStep('Saving certificate record...');
             const result = await certificateAPI.issueCertificate({
-                ownerName,
-                ownerEmail,
-                courseName,
+                ...certData,
                 hash: prepResult.hash,
                 txHash: blockchainResult.txHash,
             });
@@ -148,6 +173,11 @@ export default function IssuerDashboard() {
             setOwnerName('');
             setOwnerEmail('');
             setCourseName('');
+            setDepartment('');
+            setIssueMonth('');
+            setIssueYear('');
+            setGraduationMonth('');
+            setGraduationYear('');
             loadIssuedCertificates();
         } catch (err) {
             const msg = err.response?.data?.error || err.reason || err.message || 'Failed to issue certificate';
@@ -176,6 +206,15 @@ export default function IssuerDashboard() {
         setCopiedId(id);
         setTimeout(() => setCopiedId(''), 1500);
     };
+
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear + 5; y >= currentYear - 10; y--) {
+        years.push(y);
+    }
+
+    const inputClass = "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500";
+    const selectClass = "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
 
     return (
         <DashboardLayout title="Issuer Dashboard">
@@ -273,21 +312,76 @@ export default function IssuerDashboard() {
                     <div className="bg-white shadow rounded-lg p-6">
                         <h2 className="text-lg font-semibold mb-3">Step 4: Issue Certificate</h2>
                         <form onSubmit={handleIssueCertificate} className="space-y-4">
+                            {/* Student Name */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">Student Name *</label>
                                 <input type="text" value={ownerName} onChange={(e) => setOwnerName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                                    className={inputClass} required placeholder="Full name of the student" />
                             </div>
+
+                            {/* Student Email */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Student Email</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Student Email *</label>
                                 <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                                    className={inputClass} required placeholder="student@example.com" />
                             </div>
+
+                            {/* Course Name */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Course / Certificate Name *</label>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Course Name *</label>
                                 <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" required />
+                                    className={inputClass} required placeholder="e.g. B.Tech Computer Science" />
                             </div>
+
+                            {/* Department */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
+                                <input type="text" value={department} onChange={(e) => setDepartment(e.target.value)}
+                                    className={inputClass} required placeholder="e.g. Computer Science and Engineering" />
+                            </div>
+
+                            {/* Certificate Issue Date (Month & Year) */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Certificate Issue Date *</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <select value={issueMonth} onChange={(e) => setIssueMonth(e.target.value)}
+                                        className={selectClass} required>
+                                        <option value="">Month</option>
+                                        {MONTHS.map(m => (
+                                            <option key={m.value} value={m.value}>{m.label}</option>
+                                        ))}
+                                    </select>
+                                    <select value={issueYear} onChange={(e) => setIssueYear(e.target.value)}
+                                        className={selectClass} required>
+                                        <option value="">Year</option>
+                                        {years.map(y => (
+                                            <option key={y} value={String(y)}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Graduation Date (Month & Year) */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Graduation Date *</label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <select value={graduationMonth} onChange={(e) => setGraduationMonth(e.target.value)}
+                                        className={selectClass} required>
+                                        <option value="">Month</option>
+                                        {MONTHS.map(m => (
+                                            <option key={m.value} value={m.value}>{m.label}</option>
+                                        ))}
+                                    </select>
+                                    <select value={graduationYear} onChange={(e) => setGraduationYear(e.target.value)}
+                                        className={selectClass} required>
+                                        <option value="">Year</option>
+                                        {years.map(y => (
+                                            <option key={y} value={String(y)}>{y}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
                             {issueStep && (
                                 <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700 flex items-center space-x-2">
                                     <span className="animate-spin">⏳</span>
@@ -321,6 +415,7 @@ export default function IssuerDashboard() {
                                         <th className="py-3 px-2">Recipient</th>
                                         <th className="py-3 px-2">Email</th>
                                         <th className="py-3 px-2">Course</th>
+                                        <th className="py-3 px-2">Dept</th>
                                         <th className="py-3 px-2">Certificate Hash</th>
                                         <th className="py-3 px-2">TX Hash</th>
                                         <th className="py-3 px-2">Issued</th>
@@ -332,6 +427,7 @@ export default function IssuerDashboard() {
                                             <td className="py-3 px-2 font-medium">{cert.recipientName}</td>
                                             <td className="py-3 px-2 text-gray-500">{cert.recipientEmail || '—'}</td>
                                             <td className="py-3 px-2">{cert.courseName}</td>
+                                            <td className="py-3 px-2 text-gray-500">{cert.additionalInfo?.department || '—'}</td>
                                             <td className="py-3 px-2 font-mono text-xs">
                                                 <div className="flex items-center space-x-1">
                                                     <span title={cert.hash}>{truncateHash(cert.hash)}</span>
