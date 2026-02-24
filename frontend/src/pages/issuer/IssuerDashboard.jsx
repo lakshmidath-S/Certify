@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../components/DashboardLayout';
 import { walletService } from '../../wallet/walletService';
-import { walletAuthAPI, certificateAPI } from '../../api';
+import { useAuth } from '../../context/AuthContext';
+import { walletAuthAPI, certificateAPI, issuerAPI } from '../../api';
 
 export default function IssuerDashboard() {
+    const { user, loginWithWallet } = useAuth();
     const [walletAddress, setWalletAddress] = useState('');
     const [isConnected, setIsConnected] = useState(false);
     const [challengeMessage, setChallengeMessage] = useState('');
@@ -71,9 +73,15 @@ export default function IssuerDashboard() {
         setMessage('');
 
         try {
-            const result = await walletAuthAPI.requestChallenge(walletAddress);
+            let result;
+            if (user?.status === 'PENDING_WALLET') {
+                result = await issuerAPI.requestNonce();
+            } else {
+                result = await walletAuthAPI.requestChallenge(walletAddress);
+            }
+
             setChallengeMessage(result.message);
-            setMessage('Challenge received! Please sign the message.');
+            setMessage('Challenge received! Please sign the message to proceed.');
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to request challenge');
         }
@@ -86,15 +94,25 @@ export default function IssuerDashboard() {
         try {
             const signature = await walletService.signMessage(challengeMessage);
 
-            const result = await walletAuthAPI.verifySignature(
-                walletAddress,
-                signature,
-                challengeMessage
-            );
-
-            setSigningToken(result.signingToken);
-            sessionStorage.setItem('signingToken', result.signingToken);
-            setMessage('Signature verified! You can now issue certificates.');
+            let result;
+            if (user?.status === 'PENDING_WALLET') {
+                result = await issuerAPI.verifySignature(walletAddress, signature);
+                // After successful mapping, if backend returns the signingToken directly, save it
+                if (result.signingToken) {
+                    setSigningToken(result.signingToken);
+                    sessionStorage.setItem('signingToken', result.signingToken);
+                }
+                setMessage('Wallet successfully mapped! You can now issue certificates.');
+            } else {
+                result = await walletAuthAPI.verifySignature(
+                    walletAddress,
+                    signature,
+                    challengeMessage
+                );
+                setSigningToken(result.signingToken);
+                sessionStorage.setItem('signingToken', result.signingToken);
+                setMessage('Signature verified! You can now issue certificates.');
+            }
         } catch (err) {
             setError(err.response?.data?.error || 'Failed to verify signature');
         }
@@ -115,7 +133,7 @@ export default function IssuerDashboard() {
                 issuerPrivateKey,
             });
 
-            setMessage(`Certificate issued successfully! ID: ${result.certificateId}, Hash: ${result.hash}`);
+            setMessage(`Certificate issued successfully! ID: ${result.certificateId}, Hash: ${result.hash}, TxHash: ${result.txHash}`);
             setOwnerName('');
             setOwnerEmail('');
             setCourseName('');

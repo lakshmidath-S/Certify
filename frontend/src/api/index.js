@@ -16,6 +16,19 @@ export const authAPI = {
         return response.data;
     },
 };
+export const issuerAPI = {
+    requestNonce: async () => {
+        const response = await apiClient.get('/issuer/wallet-verification-nonce');
+        return response.data;
+    },
+    verifySignature: async (walletAddress, signature) => {
+        const response = await apiClient.post('/issuer/verify-wallet-signature', {
+            walletAddress,
+            signature,
+        });
+        return response.data;
+    }
+};
 
 export const walletAuthAPI = {
     requestChallenge: async (walletAddress) => {
@@ -65,9 +78,14 @@ export const walletAPI = {
 
 export const certificateAPI = {
     issueCertificate: async (certificateData) => {
-        const response = await apiClient.post('/certificates/issue', certificateData);
+        const response = await apiClient.post(
+            '/certificates/issue',
+            certificateData
+        );
+
         return response.data;
     },
+
 
     getMyCertificates: async (limit = 50, offset = 0) => {
         const response = await apiClient.get(`/certificates/my?limit=${limit}&offset=${offset}`);
@@ -92,4 +110,11 @@ export const verificationAPI = {
         const response = await apiClient.post('/verify/bulk', { hashes });
         return response.data;
     },
+};
+
+export const healthAPI = {
+    check: async () => {
+        const response = await apiClient.get('/health');
+        return response.data;
+    }
 };

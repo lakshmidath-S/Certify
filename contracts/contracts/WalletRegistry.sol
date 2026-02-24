@@ -9,25 +9,36 @@ pragma solidity ^0.8.20;
 contract WalletRegistry {
     
     // State variables
-    address public admin;
+    address public immutable admin;
+    mapping(address => bool) public admins;
     
-    // Mapping to track valid issuers
-    mapping(address => bool) public validIssuer;
+    // Mapping to track authorized issuers (verified via signature)
+    mapping(address => bool) public authorizedIssuers;
     
-    // Mapping to track when wallet was mapped
+    // Mapping to track suspended issuers
+    mapping(address => bool) public suspendedIssuers;
+    
+    // Legacy tracking (modified for compatibility)
     mapping(address => uint256) public mappedAt;
-    
-    // Mapping to track when wallet was revoked
     mapping(address => uint256) public revokedAt;
     
     // Events
-    event WalletMapped(address indexed issuer, uint256 timestamp);
+    event IssuerRegistered(address indexed issuer, uint256 timestamp);
+    event IssuerSuspended(address indexed issuer, uint256 timestamp);
+    event IssuerReactivated(address indexed issuer, uint256 timestamp);
     event WalletRevoked(address indexed issuer, uint256 timestamp);
-    event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
+    event AdminAdded(address indexed newAdmin);
+    event AdminRemoved(address indexed admin);
     
     // Modifiers
     modifier onlyAdmin() {
-        require(msg.sender == admin, "WalletRegistry: caller is not admin");
+        require(admins[msg.sender], "WalletRegistry: caller is not admin");
+        _;
+    }
+
+    modifier onlyActiveIssuer(address issuer) {
+        require(authorizedIssuers[issuer], "WalletRegistry: issuer not authorized");
+        require(!suspendedIssuers[issuer], "WalletRegistry: issuer suspended");
         _;
     }
     
@@ -36,57 +47,89 @@ contract WalletRegistry {
      */
     constructor() {
         admin = msg.sender;
-        emit AdminTransferred(address(0), msg.sender);
+        admins[msg.sender] = true;
+        emit AdminAdded(msg.sender);
     }
     
     /**
-     * @notice Map a new issuer wallet
-     * @param issuer Address of the issuer wallet to map
+     * @notice Register a verified issuer wallet
+     * @param issuer Address of the issuer wallet
      */
-    function mapWallet(address issuer) external onlyAdmin {
-        require(issuer != address(0), "WalletRegistry: issuer cannot be zero address");
-        require(!validIssuer[issuer], "WalletRegistry: wallet already mapped");
+    function registerIssuer(address issuer) external onlyAdmin {
+        require(issuer != address(0), "WalletRegistry: zero address");
+        require(!authorizedIssuers[issuer], "WalletRegistry: already registered");
         
-        validIssuer[issuer] = true;
+        authorizedIssuers[issuer] = true;
+        suspendedIssuers[issuer] = false;
         mappedAt[issuer] = block.timestamp;
         
-        emit WalletMapped(issuer, block.timestamp);
+        emit IssuerRegistered(issuer, block.timestamp);
     }
     
     /**
-     * @notice Revoke an issuer wallet
-     * @param issuer Address of the issuer wallet to revoke
+     * @notice Suspend an issuer wallet
+     * @param issuer Address of the issuer
      */
-    function revokeWallet(address issuer) external onlyAdmin {
-        require(issuer != address(0), "WalletRegistry: issuer cannot be zero address");
-        require(validIssuer[issuer], "WalletRegistry: wallet not mapped");
+    function suspendIssuer(address issuer) external onlyAdmin {
+        require(authorizedIssuers[issuer], "WalletRegistry: not registered");
+        require(!suspendedIssuers[issuer], "WalletRegistry: already suspended");
         
-        validIssuer[issuer] = false;
-        revokedAt[issuer] = block.timestamp;
-        
-        emit WalletRevoked(issuer, block.timestamp);
+        suspendedIssuers[issuer] = true;
+        emit IssuerSuspended(issuer, block.timestamp);
     }
-    
+
     /**
-     * @notice Check if an address is a valid issuer
-     * @param issuer Address to check
-     * @return bool True if issuer is valid and not revoked
+     * @notice Reactivate a suspended issuer wallet
+     * @param issuer Address of the issuer
+     */
+    function reactivateIssuer(address issuer) external onlyAdmin {
+        require(authorizedIssuers[issuer], "WalletRegistry: not registered");
+        require(suspendedIssuers[issuer], "WalletRegistry: not suspended");
+        
+        suspendedIssuers[issuer] = false;
+        emit IssuerReactivated(issuer, block.timestamp);
+    }
+
+    /**
+     * @notice Check if an issuer is active
      */
     function isValidIssuer(address issuer) external view returns (bool) {
-        return validIssuer[issuer];
+        return authorizedIssuers[issuer] && !suspendedIssuers[issuer];
     }
     
     /**
-     * @notice Transfer admin role to a new address
-     * @param newAdmin Address of the new admin
+     * @notice Legacy support for verification (checks both mappings)
      */
-    function transferAdmin(address newAdmin) external onlyAdmin {
-        require(newAdmin != address(0), "WalletRegistry: new admin cannot be zero address");
-        require(newAdmin != admin, "WalletRegistry: new admin is same as current admin");
+    function validIssuer(address issuer) external view returns (bool) {
+        return authorizedIssuers[issuer] && !suspendedIssuers[issuer];
+    }
+
+    /**
+     * @notice Add a new admin
+     */
+    function addAdmin(address newAdmin) external onlyAdmin {
+        require(newAdmin != address(0), "WalletRegistry: zero address");
+        admins[newAdmin] = true;
+        emit AdminAdded(newAdmin);
+    }
+
+    /**
+     * @notice Remove an admin
+     * @param adminAddress Address of the admin to remove
+     */
+    function removeAdmin(address adminAddress) external onlyAdmin {
+        require(admins[adminAddress], "WalletRegistry: not an admin");
+        require(msg.sender != adminAddress, "WalletRegistry: cannot remove yourself");
         
-        address previousAdmin = admin;
-        admin = newAdmin;
-        
-        emit AdminTransferred(previousAdmin, newAdmin);
+        admins[adminAddress] = false;
+        emit AdminRemoved(adminAddress);
+    }
+
+    /**
+     * @notice Check if an address is an admin
+     * @param account Address to check
+     */
+    function isAdmin(address account) external view returns (bool) {
+        return admins[account];
     }
 }

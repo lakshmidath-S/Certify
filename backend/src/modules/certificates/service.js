@@ -172,6 +172,40 @@ async function issueCertificate(certificateData, issuerSigner, issuerWalletFromT
     }
 }
 
+async function verifyCertificateIntegrity(certificateId) {
+    const { hashMetadata } = require('../../utils/hashing');
+    const { verifyCertificateOnChain } = require('../../config/blockchain');
+
+    // 1. Fetch certificate from DB with metadata
+    const result = await db.query(
+        'SELECT * FROM certificates WHERE id = $1',
+        [certificateId]
+    );
+
+    if (result.rows.length === 0) throw new Error('Certificate not found');
+    const cert = result.rows[0];
+
+    // 2. Perform Re-Hash (Phase 6 Hardening)
+    // We assume additional_info contains the metadata used for hashing
+    const metadata = cert.additional_info;
+    if (!metadata) throw new Error('Certificate metadata missing in DB');
+
+    const computedHash = hashMetadata(metadata);
+
+    // 3. Compare with DB hash
+    if (computedHash !== cert.metadata_hash) {
+        throw new Error('DATA_TAMPERED: Local metadata re-hash mismatch');
+    }
+
+    // 4. Compare with Blockchain (Phase 6 Hardening)
+    const onChain = await verifyCertificateOnChain(cert.metadata_hash.substring(0, 64)); // Using the 32-byte part for BC
+    if (!onChain.exists || !onChain.isValid) {
+        throw new Error('INVALID_ON_CHAIN: Certificate does not exist or is invalid on-chain');
+    }
+
+    return { success: true, cert };
+}
+
 async function getCertificatesByOwner(ownerId, limit = 50, offset = 0) {
     const result = await db.query(
         `SELECT c.*, i.email as issuer_email, i.first_name as issuer_first_name, i.last_name as issuer_last_name
@@ -226,5 +260,6 @@ module.exports = {
     issueCertificate,
     getCertificatesByOwner,
     getCertificateById,
-    getCertificateFilePath
+    getCertificateFilePath,
+    verifyCertificateIntegrity
 };

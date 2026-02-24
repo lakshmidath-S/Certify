@@ -1,13 +1,54 @@
 const app = require('./app');
 const config = require('./config/env');
-const { pool } = require('./db/pool');
-
+const db = require('./db/pool');
 const PORT = config.server.port;
 
 async function startServer() {
     try {
-        await pool.query('SELECT NOW()');
+        await db.query('SELECT NOW()');
         console.log('✅ Database connected successfully');
+
+        // Automatic schema migration for status constraint
+        try {
+            console.log('🔄 Checking database constraints...');
+            await db.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_status_check');
+            await db.query(`
+                ALTER TABLE users 
+                ADD CONSTRAINT users_status_check 
+                CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_WALLET', 'VERIFIED', 'DELETED'))
+            `);
+            console.log('✅ Database constraints updated successfully');
+        } catch (migErr) {
+            console.warn('⚠️  Failed to run automatic DB migration (might be locked, or already applied):', migErr.message);
+        }
+
+        // 🛠️ FORCE RESET ISSUER STATE
+        try {
+            console.log('🔄 Forcing test issuer wallet reset...');
+            const userRes = await db.query("SELECT id FROM users WHERE email = 'cet@certify.com'");
+            if (userRes.rows.length > 0) {
+                const userId = userRes.rows[0].id;
+                await db.query('DELETE FROM wallets WHERE user_id = $1', [userId]);
+                await db.query(`UPDATE users SET status = 'PENDING_WALLET' WHERE id = $1`, [userId]);
+                console.log('✅ Successfully reset cet@certify.com to PENDING_WALLET state.');
+            }
+        } catch (resetErr) {
+            console.warn('⚠️  Failed to reset test issuer wallet state:', resetErr.message);
+        }
+
+        // 🛠️ FORCE RESET ISSUER STATE
+        try {
+            console.log('🔄 Forcing test issuer wallet reset...');
+            const userRes = await db.query("SELECT id FROM users WHERE email = 'cet@certify.com'");
+            if (userRes.rows.length > 0) {
+                const userId = userRes.rows[0].id;
+                await db.query('DELETE FROM wallets WHERE user_id = $1', [userId]);
+                await db.query(`UPDATE users SET status = 'PENDING_WALLET' WHERE id = $1`, [userId]);
+                console.log('✅ Successfully reset cet@certify.com to PENDING_WALLET state.');
+            }
+        } catch (resetErr) {
+            console.warn('⚠️  Failed to reset test issuer wallet state:', resetErr.message);
+        }
 
         app.listen(PORT, () => {
             console.log(`\n🚀 CERTIFY Backend Server`);
@@ -24,15 +65,14 @@ async function startServer() {
     }
 }
 
-process.on('SIGTERM', async () => {
-    console.log('SIGTERM received, closing server...');
-    await pool.end();
+// Graceful shutdown (no pool.end because you didn't export it)
+process.on('SIGINT', () => {
+    console.log('\nSIGINT received, shutting down...');
     process.exit(0);
 });
 
-process.on('SIGINT', async () => {
-    console.log('\nSIGINT received, closing server...');
-    await pool.end();
+process.on('SIGTERM', () => {
+    console.log('\nSIGTERM received, shutting down...');
     process.exit(0);
 });
 

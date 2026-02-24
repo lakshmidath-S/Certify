@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from '../api';
+import { authAPI, walletAuthAPI } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -21,45 +21,71 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (email, password) => {
-        const response = await authAPI.login(email, password);
+        const data = await authAPI.login(email, password);
 
-        const { accessToken, user: userData } = response;
+        console.log('🟢 LOGIN RESPONSE:', data);
 
-        localStorage.setItem('token', accessToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        // ✅ Backend returns ONLY user (no token yet)
+        if (!data?.user) {
+            throw new Error('Invalid login response');
+        }
 
-        setToken(accessToken);
-        setUser(userData);
+        // 🔐 AUTH SUCCESS: store actual token
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token);
 
-        return userData;
+        setUser(data.user);
+        setToken(data.token);
+
+        return data.user;
     };
+
+    const loginWithWallet = async (walletAddress, signature, message) => {
+        const data = await walletAuthAPI.verifySignature(walletAddress, signature, message);
+
+        console.log('🟢 WALLET LOGIN RESPONSE:', data);
+
+        if (!data?.user || !data?.signingToken) {
+            throw new Error('Invalid wallet login response');
+        }
+
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.signingToken);
+        localStorage.setItem('signingToken', data.signingToken); // also store as signingToken for consistency
+
+        setUser(data.user);
+        setToken(data.signingToken);
+
+        return data.user;
+    };
+
 
     const logout = () => {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        sessionStorage.removeItem('signingToken');
-
-        setToken(null);
+        localStorage.clear();
         setUser(null);
+        setToken(null);
     };
 
-    const value = {
-        user,
-        token,
-        role: user?.role,
-        loading,
-        login,
-        logout,
-        isAuthenticated: !!token,
-    };
-
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return (
+        <AuthContext.Provider
+            value={{
+                user,
+                token,
+                role: user?.role,
+                loading,
+                isAuthenticated: !!token,
+                login,
+                loginWithWallet,
+                logout,
+            }}
+        >
+            {children}
+        </AuthContext.Provider>
+    );
 };
 
 export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
-    return context;
+    const ctx = useContext(AuthContext);
+    if (!ctx) throw new Error('useAuth must be inside AuthProvider');
+    return ctx;
 };

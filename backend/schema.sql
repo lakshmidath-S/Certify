@@ -11,7 +11,11 @@ CREATE TABLE users (
     role VARCHAR(20) NOT NULL CHECK (role IN ('ADMIN', 'ISSUER', 'OWNER', 'VERIFIER')),
     first_name VARCHAR(100),
     last_name VARCHAR(100),
-    status VARCHAR(20) DEFAULT 'ACTIVE' CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED')),
+    status VARCHAR(50) DEFAULT 'PENDING_WALLET' CHECK (status IN ('ACTIVE', 'INACTIVE', 'SUSPENDED', 'PENDING_WALLET', 'VERIFIED', 'DELETED')),
+    wallet_nonce VARCHAR(128),
+    nonce_expiry TIMESTAMP,
+    nonce_used BOOLEAN DEFAULT FALSE,
+    compromise_reported_at TIMESTAMP,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -55,6 +59,8 @@ CREATE TABLE certificates (
     issuer_wallet_id UUID REFERENCES wallets(id),
     blockchain_tx_hash VARCHAR(66),
     blockchain_timestamp TIMESTAMP,
+    metadata_hash VARCHAR(66) UNIQUE NOT NULL,
+    issued_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     nonce UUID NOT NULL,
     timestamp BIGINT NOT NULL,
     additional_info JSONB,
@@ -72,6 +78,8 @@ CREATE INDEX idx_certificates_owner ON certificates(owner_id);
 CREATE INDEX idx_certificates_number ON certificates(certificate_number);
 CREATE INDEX idx_certificates_revoked ON certificates(is_revoked);
 CREATE INDEX idx_certificates_issue_date ON certificates(issue_date);
+CREATE INDEX idx_certificates_metadata_hash ON certificates(metadata_hash);
+CREATE INDEX idx_certificates_recipient_email ON certificates(recipient_email);
 
 -- Certificate files table
 CREATE TABLE certificate_files (
@@ -98,7 +106,8 @@ CREATE TABLE audit_logs (
     user_agent TEXT,
     request_method VARCHAR(10),
     request_path VARCHAR(500),
-    result VARCHAR(20) NOT NULL CHECK (result IN ('SUCCESS', 'FAILURE')),
+    result VARCHAR(20), -- SUCCESS, FAILURE, PENDING, BLOCKED
+    severity VARCHAR(10) DEFAULT 'INFO' CHECK (severity IN ('INFO', 'WARNING', 'CRITICAL', 'ALERT')),
     error_message TEXT,
     metadata JSONB,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

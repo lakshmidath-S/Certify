@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 export default function LoginPage() {
@@ -7,8 +7,9 @@ export default function LoginPage() {
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
     const [searchParams] = useSearchParams();
-    const role = searchParams.get('role');
+    const roleParam = searchParams.get('role');
 
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -23,33 +24,49 @@ export default function LoginPage() {
         try {
             const user = await login(email, password);
 
+            console.log('🟢 LOGGED IN USER:', user);
+
             const roleRoutes = {
                 ADMIN: '/admin/dashboard',
                 ISSUER: '/issuer/dashboard',
                 OWNER: '/owner/dashboard',
-                VERIFIER: '/verifier/dashboard',
+                VERIFIER: '/verify',
             };
 
-            navigate(roleRoutes[user.role] || '/login');
+            const path = roleRoutes[user.role];
+
+            if (!path) throw new Error('Unknown role');
+
+            navigate(path, { replace: true });
         } catch (err) {
-            setError(err.response?.data?.error || 'Login failed');
+            console.error('🔴 LOGIN ERROR:', err);
+            setError(err.message || 'Login failed');
         } finally {
             setLoading(false);
         }
     };
+
+
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center px-4">
             <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
                 <div className="text-center mb-8">
                     <div className="text-6xl mb-4">
-                        {role === 'issuer' ? '🏛️' : role === 'owner' ? '👤' : '🔐'}
+                        {roleParam === 'issuer' ? '🏛️' :
+                            roleParam === 'owner' ? '👤' : '🔐'}
                     </div>
+
                     <h1 className="text-3xl font-bold text-gray-900">
-                        {role === 'issuer' ? 'Issuer Login' : role === 'owner' ? 'Owner Login' : 'Login'}
+                        {roleParam === 'issuer'
+                            ? 'Issuer Login'
+                            : roleParam === 'owner'
+                                ? 'Student Login'
+                                : 'Login'}
                     </h1>
+
                     <p className="text-gray-600 mt-2">
-                        {role === 'issuer' ? 'Issue certificates to students' : role === 'owner' ? 'Access your certificates' : 'Blockchain Certificate Platform'}
+                        Blockchain Certificate Platform
                     </p>
                 </div>
 
@@ -74,7 +91,7 @@ export default function LoginPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                             required
                         />
                     </div>
@@ -87,7 +104,7 @@ export default function LoginPage() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
                             required
                         />
                     </div>
@@ -95,12 +112,11 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
                     >
                         {loading ? 'Logging in...' : 'Login'}
                     </button>
                 </form>
-
 
                 <div className="mt-4 text-center">
                     <button

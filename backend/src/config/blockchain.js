@@ -2,12 +2,14 @@ const { ethers } = require('ethers');
 const config = require('./env');
 
 const WalletRegistryABI = [
-    "function mapWallet(address issuer) external",
-    "function revokeWallet(address issuer) external",
+    "function registerIssuer(address issuer) external",
+    "function suspendIssuer(address issuer) external",
+    "function reactivateIssuer(address issuer) external",
     "function isValidIssuer(address issuer) external view returns (bool)",
+    "function admins(address) external view returns (bool)",
+    "function addAdmin(address newAdmin) external",
     "function admin() external view returns (address)",
-    "event WalletMapped(address indexed issuer, uint256 timestamp)",
-    "event WalletRevoked(address indexed issuer, uint256 timestamp)"
+    "function isAdmin(address account) external view returns (bool)"
 ];
 
 const CertificateRegistryABI = [
@@ -22,16 +24,42 @@ const CertificateRegistryABI = [
 
 const provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
 
+// Perform a startup check to ensure RPC is accessible
+(async () => {
+    try {
+        const network = await provider.getNetwork();
+        console.log(`✅ Blockchain connected: ${network.name} (Chain ID: ${network.chainId})`);
+    } catch (error) {
+        console.warn('⚠️  Blockchain RPC connection warning:', error.message);
+    }
+})();
+
+const isAdminKeyPlaceholder = !config.blockchain.adminPrivateKey || config.blockchain.adminPrivateKey.includes('your_admin_private');
+let blockchainSigner;
+
+try {
+    if (isAdminKeyPlaceholder) {
+        console.warn('⚠️  ADMIN_PRIVATE_KEY is missing or a placeholder. On-chain write operations will fail.');
+        // Create an ephemeral wallet or just leave it null
+        blockchainSigner = null;
+    } else {
+        blockchainSigner = new ethers.Wallet(config.blockchain.adminPrivateKey, provider);
+    }
+} catch (error) {
+    console.error('❌ Failed to initialize blockchain signer:', error.message);
+    blockchainSigner = null;
+}
+
 const walletRegistry = new ethers.Contract(
     config.blockchain.walletRegistryAddress,
     WalletRegistryABI,
-    provider
+    blockchainSigner || provider // Use provider if no signer
 );
 
 const certificateRegistry = new ethers.Contract(
     config.blockchain.certRegistryAddress,
     CertificateRegistryABI,
-    provider
+    blockchainSigner || provider // Use provider if no signer
 );
 
 async function isIssuerValidOnChain(address) {
@@ -44,37 +72,39 @@ async function isIssuerValidOnChain(address) {
     }
 }
 
-async function mapWalletOnChain(issuerAddress, adminSigner) {
+async function registerIssuerOnChain(issuerAddress, adminSigner) {
     try {
         const walletRegistryWithSigner = walletRegistry.connect(adminSigner);
-        const tx = await walletRegistryWithSigner.mapWallet(issuerAddress);
+        const tx = await walletRegistryWithSigner.registerIssuer(issuerAddress);
         const receipt = await tx.wait();
-
-        return {
-            txHash: receipt.hash,
-            blockNumber: receipt.blockNumber,
-            gasUsed: receipt.gasUsed.toString()
-        };
+        return { txHash: receipt.hash, blockNumber: receipt.blockNumber, gasUsed: receipt.gasUsed.toString() };
     } catch (error) {
-        console.error('Error mapping wallet on-chain:', error);
-        throw new Error('Failed to map wallet on blockchain');
+        console.error('Error registering issuer on-chain:', error);
+        throw new Error('Failed to register issuer on blockchain');
     }
 }
 
-async function revokeWalletOnChain(issuerAddress, adminSigner) {
+async function suspendIssuerOnChain(issuerAddress, adminSigner) {
     try {
         const walletRegistryWithSigner = walletRegistry.connect(adminSigner);
-        const tx = await walletRegistryWithSigner.revokeWallet(issuerAddress);
+        const tx = await walletRegistryWithSigner.suspendIssuer(issuerAddress);
         const receipt = await tx.wait();
-
-        return {
-            txHash: receipt.hash,
-            blockNumber: receipt.blockNumber,
-            gasUsed: receipt.gasUsed.toString()
-        };
+        return { txHash: receipt.hash, blockNumber: receipt.blockNumber };
     } catch (error) {
-        console.error('Error revoking wallet on-chain:', error);
-        throw new Error('Failed to revoke wallet on blockchain');
+        console.error('Error suspending issuer on-chain:', error);
+        throw new Error('Failed to suspend issuer on blockchain');
+    }
+}
+
+async function reactivateIssuerOnChain(issuerAddress, adminSigner) {
+    try {
+        const walletRegistryWithSigner = walletRegistry.connect(adminSigner);
+        const tx = await walletRegistryWithSigner.reactivateIssuer(issuerAddress);
+        const receipt = await tx.wait();
+        return { txHash: receipt.hash, blockNumber: receipt.blockNumber };
+    } catch (error) {
+        console.error('Error reactivating issuer on-chain:', error);
+        throw new Error('Failed to reactivate issuer on blockchain');
     }
 }
 
@@ -136,11 +166,13 @@ async function verifyCertificateOnChain(hash) {
 
 module.exports = {
     provider,
+    blockchainSigner,
     walletRegistry,
     certificateRegistry,
     isIssuerValidOnChain,
-    mapWalletOnChain,
-    revokeWalletOnChain,
+    registerIssuerOnChain,
+    suspendIssuerOnChain,
+    reactivateIssuerOnChain,
     storeCertificateHashOnChain,
     revokeCertificateOnChain,
     verifyCertificateOnChain

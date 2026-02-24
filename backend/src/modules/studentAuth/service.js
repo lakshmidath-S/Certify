@@ -1,143 +1,164 @@
-const db = require('../../db/pool');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const { v4: uuidv4 } = require('uuid');
+const db = require('../../db/pool');
 const config = require('../../config/env');
 
-// Generate 6-digit OTP
-function generateOTP() {
-    return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-// Request OTP for student email
+/**
+ * STEP 1: Request OTP
+ * Rules:
+ * - Email MUST exist in certificates
+ * - User MUST NOT already exist
+ */
 async function requestOTP(email) {
-    if (!email || !email.includes('@')) {
-        throw new Error('Valid email required');
+    // 1. Certificate must exist
+    const certCheck = await db.query(
+        'SELECT 1 FROM certificates WHERE owner_email = $1',
+        [email]
+    );
+
+    if (certCheck.rows.length === 0) {
+        throw new Error('No certificate issued for this email');
     }
 
-    // Check if user already exists
+    // 2. User must not exist
     const existingUser = await db.query(
         'SELECT id FROM users WHERE email = $1',
-        [email.toLowerCase()]
+        [email]
     );
 
     if (existingUser.rows.length > 0) {
-        throw new Error('Email already registered. Please login.');
+        throw new Error('User already registered. Please login.');
     }
 
-    const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    // 3. Generate OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store OTP (upsert)
     await db.query(
-        `INSERT INTO student_otp (email, otp, expires_at, verified)
-     VALUES ($1, $2, $3, false)
-     ON CONFLICT (email)
-     DO UPDATE SET otp = $2, expires_at = $3, verified = false`,
-        [email.toLowerCase(), otp, expiresAt]
+        `
+        INSERT INTO student_otps (email, otp, verified, created_at)
+        VALUES ($1, $2, false, NOW())
+        ON CONFLICT (email)
+        DO UPDATE SET otp = $2, verified = false, created_at = NOW()
+        `,
+        [email, otp]
     );
 
-    // TODO: Send OTP via email service
-    // For now, return OTP in response (DEVELOPMENT ONLY)
-    console.log(`OTP for ${email}: ${otp}`);
-
     return {
-        message: 'OTP sent to email',
-        email: email.toLowerCase(),
-        // REMOVE IN PRODUCTION:
-        otp: otp
+        message: 'OTP sent to registered email',
+        otp // ⚠️ DEV ONLY
     };
 }
 
-// Verify OTP
+/**
+ * STEP 2: Verify OTP
+ */
 async function verifyOTP(email, otp) {
     const result = await db.query(
-        `SELECT * FROM student_otp 
-     WHERE email = $1 AND otp = $2 AND expires_at > NOW() AND verified = false`,
-        [email.toLowerCase(), otp]
+        `
+        SELECT otp, created_at
+        FROM student_otps
+        WHERE email = $1
+        `,
+        [email]
     );
 
     if (result.rows.length === 0) {
-        throw new Error('Invalid or expired OTP');
+        throw new Error('OTP not requested');
     }
 
-    // Mark as verified
+    const record = result.rows[0];
+
+    // Optional: expiry check (10 mins)
+    const age = Date.now() - new Date(record.created_at).getTime();
+    if (age > 10 * 60 * 1000) {
+        throw new Error('OTP expired');
+    }
+
+    if (record.otp !== otp) {
+        throw new Error('Invalid OTP');
+    }
+
     await db.query(
-        'UPDATE student_otp SET verified = true WHERE email = $1',
-        [email.toLowerCase()]
+        `UPDATE student_otps SET verified = true WHERE email = $1`,
+        [email]
     );
 
-    return {
-        message: 'OTP verified successfully',
-        email: email.toLowerCase()
-    };
+    return { message: 'OTP verified' };
 }
 
-// Complete registration after OTP verification
+/**
+ * STEP 3: Complete Registration
+ */
 async function completeRegistration(email, password, firstName, lastName) {
-    // Check if OTP was verified
-    const otpResult = await db.query(
-        'SELECT * FROM student_otp WHERE email = $1 AND verified = true',
-        [email.toLowerCase()]
-    );
+    await db.query('BEGIN');
 
-    if (otpResult.rows.length === 0) {
-        throw new Error('Email not verified. Please verify OTP first.');
-    }
+    try {
+        // 1. OTP must be verified
+        const otpCheck = await db.query(
+            `
+            SELECT verified FROM student_otps
+            WHERE email = $1
+            `,
+            [email]
+        );
 
-    // Check if user already exists
-    const existingUser = await db.query(
-        'SELECT id FROM users WHERE email = $1',
-        [email.toLowerCase()]
-    );
-
-    if (existingUser.rows.length > 0) {
-        throw new Error('User already exists');
-    }
-
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Create user with OWNER role
-    const userResult = await db.query(
-        `INSERT INTO users (email, password_hash, first_name, last_name, role, is_active)
-     VALUES ($1, $2, $3, $4, 'OWNER', true)
-     RETURNING id, email, first_name, last_name, role`,
-        [email.toLowerCase(), hashedPassword, firstName, lastName]
-    );
-
-    const user = userResult.rows[0];
-
-    // Delete OTP record
-    await db.query('DELETE FROM student_otp WHERE email = $1', [email.toLowerCase()]);
-
-    // Generate JWT token
-    const accessToken = jwt.sign(
-        {
-            userId: user.id,
-            email: user.email,
-            role: user.role
-        },
-        config.jwt.secret,
-        { expiresIn: config.jwt.expiresIn }
-    );
-
-    // Log registration
-    await db.query(
-        `INSERT INTO audit_logs (user_id, action, resource_type, result)
-     VALUES ($1, 'STUDENT_REGISTERED', 'USER', 'SUCCESS')`,
-        [user.id]
-    );
-
-    return {
-        accessToken,
-        user: {
-            id: user.id,
-            email: user.email,
-            firstName: user.first_name,
-            lastName: user.last_name,
-            role: user.role
+        if (
+            otpCheck.rows.length === 0 ||
+            otpCheck.rows[0].verified !== true
+        ) {
+            throw new Error('OTP verification required');
         }
-    };
+
+        // 2. Create user
+        const passwordHash = await bcrypt.hash(password, 10);
+        const userId = uuidv4();
+
+        await db.query(
+            `
+            INSERT INTO users
+            (id, email, password_hash, role, first_name, last_name, status)
+            VALUES ($1, $2, $3, 'OWNER', $4, $5, 'ACTIVE')
+            `,
+            [userId, email, passwordHash, firstName, lastName]
+        );
+
+        // 3. Link certificates
+        await db.query(
+            `
+            UPDATE certificates
+            SET owner_id = $1
+            WHERE owner_email = $2
+            `,
+            [userId, email]
+        );
+
+        // 4. Cleanup OTP
+        await db.query(
+            `DELETE FROM student_otps WHERE email = $1`,
+            [email]
+        );
+
+        await db.query('COMMIT');
+
+        const token = jwt.sign(
+            { userId, email, role: 'OWNER' },
+            config.jwt.secret,
+            { expiresIn: config.jwt.expiresIn }
+        );
+
+        return {
+            accessToken: token,
+            user: {
+                id: userId,
+                email,
+                role: 'OWNER'
+            }
+        };
+    } catch (err) {
+        await db.query('ROLLBACK');
+        throw err;
+    }
 }
 
 module.exports = {

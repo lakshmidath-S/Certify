@@ -18,6 +18,7 @@ export default function StudentOnboardPage() {
 
     const navigate = useNavigate();
 
+    // ===================== STEP 1: REQUEST OTP =====================
     const handleRequestOTP = async (e) => {
         e.preventDefault();
         setError('');
@@ -25,12 +26,16 @@ export default function StudentOnboardPage() {
         setLoading(true);
 
         try {
-            const response = await axios.post(`${API_BASE}/student-auth/request-otp`, { email });
-            setMessage(response.data.message);
+            const response = await axios.post(
+                `${API_BASE}/auth/student/request-otp`,
+                { email }
+            );
 
-            // DEV ONLY - show OTP
+            setMessage(response.data.message || 'OTP sent to your email');
+
+            // DEV ONLY: show OTP if backend sends it
             if (response.data.otp) {
-                setMessage(`OTP sent! (DEV: ${response.data.otp})`);
+                setMessage(`OTP sent! (DEV OTP: ${response.data.otp})`);
             }
 
             setStep(2);
@@ -41,6 +46,7 @@ export default function StudentOnboardPage() {
         }
     };
 
+    // ===================== STEP 2: VERIFY OTP =====================
     const handleVerifyOTP = async (e) => {
         e.preventDefault();
         setError('');
@@ -48,8 +54,12 @@ export default function StudentOnboardPage() {
         setLoading(true);
 
         try {
-            await axios.post(`${API_BASE}/student-auth/verify-otp`, { email, otp });
-            setMessage('Email verified! Please set your password.');
+            await axios.post(
+                `${API_BASE}/auth/student/verify-otp`,
+                { email, otp }
+            );
+
+            setMessage('Email verified successfully!');
             setStep(3);
         } catch (err) {
             setError(err.response?.data?.error || 'Invalid OTP');
@@ -58,6 +68,7 @@ export default function StudentOnboardPage() {
         }
     };
 
+    // ===================== STEP 3: COMPLETE REGISTRATION =====================
     const handleCompleteRegistration = async (e) => {
         e.preventDefault();
         setError('');
@@ -76,19 +87,22 @@ export default function StudentOnboardPage() {
         }
 
         try {
-            const response = await axios.post(`${API_BASE}/student-auth/complete-registration`, {
-                email,
-                password,
-                firstName,
-                lastName
-            });
+            const response = await axios.post(
+                `${API_BASE}/auth/student/complete-registration`,
+                {
+                    email,
+                    password,
+                    firstName,
+                    lastName
+                }
+            );
 
-            // Store token and user data
+            // Save auth data
             localStorage.setItem('token', response.data.accessToken);
             localStorage.setItem('user', JSON.stringify(response.data.user));
 
-            // Redirect to owner dashboard
-            navigate('/owner/dashboard');
+            // Redirect to student dashboard
+            navigate('/student/dashboard');
         } catch (err) {
             setError(err.response?.data?.error || 'Registration failed');
         } finally {
@@ -102,183 +116,117 @@ export default function StudentOnboardPage() {
                 <div className="text-center mb-8">
                     <div className="text-6xl mb-4">🎓</div>
                     <h1 className="text-3xl font-bold text-gray-900">Student Onboarding</h1>
-                    <p className="text-gray-600 mt-2">First-time access for certificate owners</p>
+                    <p className="text-gray-600 mt-2">
+                        First-time access for certificate owners
+                    </p>
                 </div>
 
-                <div className="mb-6">
-                    <div className="flex items-center justify-between">
-                        <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-                                1
-                            </div>
-                            <span className="ml-2 text-sm">Email</span>
-                        </div>
-                        <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-                                2
-                            </div>
-                            <span className="ml-2 text-sm">Verify</span>
-                        </div>
-                        <div className={`flex items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-                                3
-                            </div>
-                            <span className="ml-2 text-sm">Complete</span>
-                        </div>
-                    </div>
+                {/* Step Indicator */}
+                <div className="mb-6 flex justify-between text-sm">
+                    <span className={step >= 1 ? 'text-blue-600' : 'text-gray-400'}>Email</span>
+                    <span className={step >= 2 ? 'text-blue-600' : 'text-gray-400'}>Verify</span>
+                    <span className={step >= 3 ? 'text-blue-600' : 'text-gray-400'}>Complete</span>
                 </div>
 
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
+                    <div className="bg-red-100 text-red-700 p-3 rounded mb-4">
                         {error}
                     </div>
                 )}
 
                 {message && (
-                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded mb-4">
+                    <div className="bg-green-100 text-green-700 p-3 rounded mb-4">
                         {message}
                     </div>
                 )}
 
+                {/* STEP 1 */}
                 {step === 1 && (
                     <form onSubmit={handleRequestOTP} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                University Email
-                            </label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                placeholder="student@university.edu"
-                                required
-                            />
-                        </div>
-
+                        <input
+                            type="email"
+                            placeholder="student@university.edu"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full border px-3 py-2 rounded"
+                            required
+                        />
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                            className="w-full bg-blue-600 text-white py-2 rounded"
                         >
-                            {loading ? 'Sending OTP...' : 'Send Verification Code'}
+                            {loading ? 'Sending...' : 'Send OTP'}
                         </button>
                     </form>
                 )}
 
+                {/* STEP 2 */}
                 {step === 2 && (
                     <form onSubmit={handleVerifyOTP} className="space-y-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Enter 6-digit OTP
-                            </label>
-                            <input
-                                type="text"
-                                value={otp}
-                                onChange={(e) => setOtp(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest"
-                                placeholder="000000"
-                                maxLength="6"
-                                required
-                            />
-                            <p className="text-xs text-gray-500 mt-1">Check your email: {email}</p>
-                        </div>
-
+                        <input
+                            type="text"
+                            placeholder="Enter OTP"
+                            value={otp}
+                            onChange={(e) => setOtp(e.target.value)}
+                            maxLength={6}
+                            className="w-full border px-3 py-2 rounded text-center tracking-widest"
+                            required
+                        />
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                            className="w-full bg-blue-600 text-white py-2 rounded"
                         >
                             {loading ? 'Verifying...' : 'Verify OTP'}
                         </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setStep(1)}
-                            className="w-full text-sm text-gray-600 hover:text-gray-800"
-                        >
-                            ← Change email
-                        </button>
                     </form>
                 )}
 
+                {/* STEP 3 */}
                 {step === 3 && (
                     <form onSubmit={handleCompleteRegistration} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    First Name
-                                </label>
-                                <input
-                                    type="text"
-                                    value={firstName}
-                                    onChange={(e) => setFirstName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Last Name
-                                </label>
-                                <input
-                                    type="text"
-                                    value={lastName}
-                                    onChange={(e) => setLastName(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    required
-                                />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Password
-                            </label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                                Confirm Password
-                            </label>
-                            <input
-                                type="password"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required
-                            />
-                        </div>
-
+                        <input
+                            type="text"
+                            placeholder="First Name"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            className="w-full border px-3 py-2 rounded"
+                            required
+                        />
+                        <input
+                            type="text"
+                            placeholder="Last Name"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            className="w-full border px-3 py-2 rounded"
+                            required
+                        />
+                        <input
+                            type="password"
+                            placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full border px-3 py-2 rounded"
+                            required
+                        />
+                        <input
+                            type="password"
+                            placeholder="Confirm Password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            className="w-full border px-3 py-2 rounded"
+                            required
+                        />
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                            className="w-full bg-blue-600 text-white py-2 rounded"
                         >
                             {loading ? 'Creating account...' : 'Complete Registration'}
                         </button>
                     </form>
                 )}
-
-                <div className="mt-6 text-center space-y-2">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="text-sm text-gray-600 hover:text-gray-800"
-                    >
-                        ← Back to home
-                    </button>
-                    <p className="text-xs text-gray-500">
-                        Institutions: Contact admin for onboarding
-                    </p>
-                </div>
             </div>
         </div>
     );

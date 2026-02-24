@@ -59,7 +59,47 @@ async function listIssuers(req, res) {
     }
 }
 
+
+async function suspendIssuer(req, res) {
+    try {
+        const { issuerId } = req.body;
+        if (!issuerId) return res.status(400).json({ success: false, error: 'issuerId is required' });
+
+        const result = await adminService.suspendIssuer(issuerId);
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+}
+
+async function reactivateIssuer(req, res) {
+    try {
+        const { issuerId } = req.body;
+        if (!issuerId) return res.status(400).json({ success: false, error: 'issuerId is required' });
+
+        const result = await adminService.reactivateIssuer(issuerId);
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+}
+
+async function reportCompromise(req, res) {
+    try {
+        const { issuerId } = req.body;
+        if (!issuerId) return res.status(400).json({ success: false, error: 'issuerId is required' });
+
+        const result = await adminService.reportCompromise(issuerId);
+        res.json(result);
+    } catch (err) {
+        res.status(400).json({ success: false, error: err.message });
+    }
+}
+
 module.exports = {
     createIssuer,
-    listIssuers
+    listIssuers,
+    suspendIssuer,
+    reactivateIssuer,
+    reportCompromise
 };

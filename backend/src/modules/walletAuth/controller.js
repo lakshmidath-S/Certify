@@ -1,69 +1,73 @@
 const walletAuthService = require('./service');
 
-async function requestChallenge(req, res) {
+const requestChallenge = async (req, res) => {
     try {
         const { walletAddress } = req.body;
 
         if (!walletAddress) {
             return res.status(400).json({
                 success: false,
-                error: 'Wallet address is required'
+                error: 'Wallet address required',
             });
         }
 
-        const result = await walletAuthService.generateChallenge(walletAddress);
+        // ✅ DELEGATE to service (handles UPSERT safely)
+        const { message } = await walletAuthService.generateChallenge(walletAddress);
 
-        res.json({
+        return res.json({
             success: true,
-            message: result.message,
-            walletAddress: walletAddress.toLowerCase()
+            message, // frontend expects `message`
         });
-    } catch (error) {
-        console.error('Challenge generation error:', error);
-        res.status(400).json({
+    } catch (err) {
+        console.error('REQUEST CHALLENGE ERROR:', err);
+        return res.status(400).json({
             success: false,
-            error: error.message
+            error: err.message,
         });
     }
-}
+};
 
-async function verifySignature(req, res) {
+const verifySignature = async (req, res) => {
     try {
         const { walletAddress, signature, message } = req.body;
 
         if (!walletAddress || !signature || !message) {
             return res.status(400).json({
                 success: false,
-                error: 'Wallet address, signature, and message are required'
+                error: 'Wallet address, signature, and message are required',
             });
         }
 
-        const result = await walletAuthService.verifySignature(walletAddress, signature, message);
+        const result = await walletAuthService.verifySignature(
+            walletAddress,
+            signature,
+            message
+        );
 
-        res.json({
+        // 🛡️ Set httpOnly cookie (Phase 8 Hardening)
+        res.cookie('token', result.signingToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 3600000 // 1 hour
+        });
+
+        return res.json({
             success: true,
             signingToken: result.signingToken,
             user: result.user,
-            expiresIn: '5m'
+            expiresIn: '1h',
         });
     } catch (error) {
         console.error('Signature verification error:', error);
-
-        let statusCode = 400;
-        if (error.message.includes('expired')) {
-            statusCode = 401;
-        } else if (error.message.includes('not a valid issuer') || error.message.includes('not mapped')) {
-            statusCode = 403;
-        }
-
-        res.status(statusCode).json({
+        return res.status(400).json({
             success: false,
-            error: error.message
+            error: error.message,
         });
     }
-}
+};
 
 module.exports = {
     requestChallenge,
-    verifySignature
+    verifySignature,
 };

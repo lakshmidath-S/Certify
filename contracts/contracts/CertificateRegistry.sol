@@ -11,22 +11,24 @@ import "./IWalletRegistry.sol";
 contract CertificateRegistry {
     
     // Struct to store certificate information
-    struct CertInfo {
+    struct Certificate {
+        bytes32 hash;
         address issuer;
         uint256 issuedAt;
         bool revoked;
         uint256 revokedAt;
+        bool exists;
     }
     
     // State variables
     address public admin;
-    IWalletRegistry public walletRegistry;
+    IWalletRegistry public immutable walletRegistry;
     
     // Mapping from certificate hash to certificate info
-    mapping(bytes32 => CertInfo) public certificates;
+    mapping(bytes32 => Certificate) public certificates;
     
     // Events
-    event CertificateStored(bytes32 indexed hash, address indexed issuer, uint256 timestamp);
+    event CertificateIssued(bytes32 indexed hash, address indexed issuer, uint256 timestamp);
     event CertificateRevoked(bytes32 indexed hash, uint256 timestamp);
     event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
     
@@ -36,8 +38,8 @@ contract CertificateRegistry {
         _;
     }
     
-    modifier onlyValidIssuer() {
-        require(walletRegistry.isValidIssuer(msg.sender), "CertificateRegistry: caller is not a valid issuer");
+    modifier onlyActiveIssuer() {
+        require(walletRegistry.isValidIssuer(msg.sender), "CertificateRegistry: issuer not active or suspended");
         _;
     }
     
@@ -58,28 +60,30 @@ contract CertificateRegistry {
      * @notice Store a certificate hash
      * @param hash SHA256 hash of the certificate
      */
-    function storeCertificateHash(bytes32 hash) external onlyValidIssuer {
+    function storeCertificateHash(bytes32 hash) external onlyActiveIssuer {
         require(hash != bytes32(0), "CertificateRegistry: hash cannot be zero");
-        require(certificates[hash].issuer == address(0), "CertificateRegistry: certificate hash already exists");
+        require(!certificates[hash].exists, "CertificateRegistry: duplicate certificate");
         
-        certificates[hash] = CertInfo({
+        certificates[hash] = Certificate({
+            hash: hash,
             issuer: msg.sender,
             issuedAt: block.timestamp,
             revoked: false,
-            revokedAt: 0
+            revokedAt: 0,
+            exists: true
         });
         
-        emit CertificateStored(hash, msg.sender, block.timestamp);
+        emit CertificateIssued(hash, msg.sender, block.timestamp);
     }
     
     /**
      * @notice Revoke a certificate
      * @param hash SHA256 hash of the certificate to revoke
      */
-    function revokeCertificate(bytes32 hash) external onlyAdmin {
-        require(hash != bytes32(0), "CertificateRegistry: hash cannot be zero");
-        require(certificates[hash].issuer != address(0), "CertificateRegistry: certificate does not exist");
-        require(!certificates[hash].revoked, "CertificateRegistry: certificate already revoked");
+    function revokeCertificate(bytes32 hash) external {
+        require(certificates[hash].exists, "CertificateRegistry: not found");
+        require(certificates[hash].issuer == msg.sender || msg.sender == admin, "CertificateRegistry: not authorized");
+        require(!certificates[hash].revoked, "CertificateRegistry: already revoked");
         
         certificates[hash].revoked = true;
         certificates[hash].revokedAt = block.timestamp;
@@ -90,21 +94,15 @@ contract CertificateRegistry {
     /**
      * @notice Check if a certificate is valid
      * @param hash SHA256 hash of the certificate
-     * @return bool True if certificate exists and is not revoked
      */
     function isValidCertificate(bytes32 hash) external view returns (bool) {
-        CertInfo memory cert = certificates[hash];
+        Certificate memory cert = certificates[hash];
         
-        // Certificate must exist and not be revoked
-        if (cert.issuer == address(0)) {
+        if (!cert.exists || cert.revoked) {
             return false;
         }
         
-        if (cert.revoked) {
-            return false;
-        }
-        
-        // Check if issuer wallet is still valid
+        // Issuer must still be active
         if (!walletRegistry.isValidIssuer(cert.issuer)) {
             return false;
         }
@@ -114,11 +112,6 @@ contract CertificateRegistry {
     
     /**
      * @notice Get certificate details
-     * @param hash SHA256 hash of the certificate
-     * @return issuer Address of the issuer
-     * @return issuedAt Timestamp when certificate was issued
-     * @return revoked Whether certificate is revoked
-     * @return revokedAt Timestamp when certificate was revoked (0 if not revoked)
      */
     function getCertificateInfo(bytes32 hash) external view returns (
         address issuer,
@@ -126,21 +119,17 @@ contract CertificateRegistry {
         bool revoked,
         uint256 revokedAt
     ) {
-        CertInfo memory cert = certificates[hash];
+        Certificate memory cert = certificates[hash];
         return (cert.issuer, cert.issuedAt, cert.revoked, cert.revokedAt);
     }
-    
+
     /**
-     * @notice Transfer admin role to a new address
-     * @param newAdmin Address of the new admin
+     * @notice Transfer admin role
      */
     function transferAdmin(address newAdmin) external onlyAdmin {
-        require(newAdmin != address(0), "CertificateRegistry: new admin cannot be zero address");
-        require(newAdmin != admin, "CertificateRegistry: new admin is same as current admin");
-        
+        require(newAdmin != address(0), "CertificateRegistry: zero address");
         address previousAdmin = admin;
         admin = newAdmin;
-        
         emit AdminTransferred(previousAdmin, newAdmin);
     }
 }

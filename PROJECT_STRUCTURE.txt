@@ -1,0 +1,135 @@
+Certify/
+├── backend/
+│   ├── scripts/
+│   │   ├── seed-admin.js
+│   │   ├── seed-users.js
+│   │   ├── test-login.js
+│   │   └── verify-issuance.js
+│   ├── sql/
+│   │   ├── student_otp.sql
+│   │   └── wallet_challenge.sql
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── blockchain.js
+│   │   │   └── env.js
+│   │   ├── db/
+│   │   │   └── pool.js
+│   │   ├── middlewares/
+│   │   │   ├── authMiddleware.js
+│   │   │   ├── requireIssuerSignature.js
+│   │   │   └── roleMiddleware.js
+│   │   ├── modules/
+│   │   │   ├── admin/
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── routes.js
+│   │   │   │   └── service.js
+│   │   │   ├── auth/
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── routes.js
+│   │   │   │   └── service.js
+│   │   │   ├── certificates/
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── hash.js
+│   │   │   │   ├── pdf.js
+│   │   │   │   ├── qr.js
+│   │   │   │   ├── routes.js
+│   │   │   │   └── service.js
+│   │   │   ├── health/
+│   │   │   │   ├── controller.js
+│   │   │   │   └── routes.js
+│   │   │   ├── issuer/
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── routes.js
+│   │   │   │   └── service.js
+│   │   │   ├── studentAuth/
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── routes.js
+│   │   │   │   └── service.js
+│   │   │   ├── verification/
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── routes.js
+│   │   │   │   └── service.js
+│   │   │   ├── walletAuth/
+│   │   │   │   ├── controller.js
+│   │   │   │   ├── routes.js
+│   │   │   │   └── service.js
+│   │   │   └── wallets/
+│   │   │       ├── controller.js
+│   │   │       ├── routes.js
+│   │   │       └── service.js
+│   │   ├── routes/
+│   │   │   └── index.js
+│   │   ├── app.js
+│   │   └── server.js
+│   ├── .env
+│   ├── .gitignore
+│   ├── migrate-student-otp.js
+│   ├── migrate-wallet-challenges.js
+│   ├── package.json
+│   ├── README.md
+│   ├── schema.sql
+│   └── test-api.ps1
+├── contracts/
+│   ├── contracts/
+│   │   ├── CertificateRegistry.sol
+│   │   ├── IWalletRegistry.sol
+│   │   └── WalletRegistry.sol
+│   ├── scripts/
+│   │   ├── deploy-certificate-registry.js
+│   │   └── deploy-wallet-registry.js
+│   ├── test/
+│   │   ├── CertificateRegistry.test.js
+│   │   └── WalletRegistry.test.js
+│   ├── .env.example
+│   ├── .gitignore
+│   ├── hardhat.config.js
+│   ├── package.json
+│   └── README.md
+├── frontend/
+│   ├── src/
+│   │   ├── api/
+│   │   │   ├── client.js
+│   │   │   └── index.js
+│   │   ├── components/
+│   │   │   ├── DashboardLayout.jsx
+│   │   │   ├── ProtectedRoute.jsx
+│   │   │   ├── StatusBadge.jsx
+│   │   │   └── SystemHealth.jsx
+│   │   ├── context/
+│   │   │   └── AuthContext.jsx
+│   │   ├── pages/
+│   │   │   ├── admin/
+│   │   │   │   ├── AdminDashboard.jsx
+│   │   │   │   └── AdminLoginPage.jsx
+│   │   │   ├── issuer/
+│   │   │   │   ├── IssueCertificate.jsx
+│   │   │   │   └── IssuerDashboard.jsx
+│   │   │   ├── landing/
+│   │   │   │   └── LandingPage.jsx
+│   │   │   ├── login/
+│   │   │   │   └── LoginPage.jsx
+│   │   │   ├── owner/
+│   │   │   │   └── OwnerDashboard.jsx
+│   │   │   ├── register/
+│   │   │   │   └── RegisterPage.jsx
+│   │   │   ├── student/
+│   │   │   │   └── StudentOnboardPage.jsx
+│   │   │   └── verifier/
+│   │   │       └── VerifierDashboard.jsx
+│   │   ├── routes/
+│   │   │   └── AppRoutes.jsx
+│   │   ├── wallet/
+│   │   │   └── walletService.js
+│   │   ├── App.jsx
+│   │   ├── index.css
+│   │   └── main.jsx
+│   ├── index.html
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── README.md
+│   ├── tailwind.config.js
+│   └── vite.config.js
+├── .gitignore
+├── generate_tree.js
+├── PROJECT_STRUCTURE.txt
+└── README.md

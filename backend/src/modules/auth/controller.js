@@ -11,17 +11,10 @@ async function register(req, res) {
             });
         }
 
-        if (!['ADMIN', 'ISSUER', 'OWNER', 'VERIFIER'].includes(role)) {
+        if (!['ADMIN', 'ISSUER', 'STUDENT', 'VERIFIER'].includes(role)) {
             return res.status(400).json({
                 success: false,
                 error: 'Invalid role'
-            });
-        }
-
-        if (password.length < 8) {
-            return res.status(400).json({
-                success: false,
-                error: 'Password must be at least 8 characters'
             });
         }
 
@@ -35,13 +28,7 @@ async function register(req, res) {
 
         res.status(201).json({
             success: true,
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-                firstName: user.first_name,
-                lastName: user.last_name
-            }
+            user
         });
     } catch (error) {
         console.error('Registration error:', error);
@@ -56,28 +43,32 @@ async function login(req, res) {
     try {
         const { email, password } = req.body;
 
-        if (!email || !password) {
-            return res.status(400).json({
-                success: false,
-                error: 'Email and password are required'
-            });
-        }
-
         const result = await authService.login(email, password);
 
-        res.json({
+        console.log('✅ LOGIN SUCCESS:', result.user.email, result.user.role);
+
+        // 🛡️ Set httpOnly cookie (Phase 8 Hardening)
+        res.cookie('token', result.token, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict',
+            maxAge: 3600000 // 1 hour
+        });
+
+        return res.status(200).json({
             success: true,
-            accessToken: result.token,
-            user: result.user
+            user: result.user,
+            token: result.token // Keep token in response for legacy/mobile if needed
         });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(401).json({
+        console.error('❌ Login error:', error.message);
+        return res.status(401).json({
             success: false,
             error: error.message
         });
     }
 }
+
 
 async function getProfile(req, res) {
     try {
@@ -92,15 +83,7 @@ async function getProfile(req, res) {
 
         res.json({
             success: true,
-            user: {
-                id: user.id,
-                email: user.email,
-                role: user.role,
-                firstName: user.first_name,
-                lastName: user.last_name,
-                status: user.status,
-                createdAt: user.created_at
-            }
+            user
         });
     } catch (error) {
         console.error('Get profile error:', error);

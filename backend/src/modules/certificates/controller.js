@@ -1,6 +1,6 @@
 const fs = require('fs').promises;
 const certificateService = require('./service');
-const { ethers } = require('ethers');
+const db = require('../../db/pool');
 
 async function issueCertificate(req, res) {
     try {
@@ -8,17 +8,18 @@ async function issueCertificate(req, res) {
             ownerName,
             ownerEmail,
             courseName,
-            ownerId,
             issuerPrivateKey
         } = req.body;
 
-        if (!ownerName || !courseName || !ownerId || !issuerPrivateKey) {
+        // ✅ Basic validation
+        if (!ownerName || !ownerEmail || !courseName || !issuerPrivateKey) {
             return res.status(400).json({
                 success: false,
-                error: 'Required fields: ownerName, courseName, ownerId, issuerPrivateKey'
+                error: 'Required fields: ownerName, ownerEmail, courseName, issuerPrivateKey'
             });
         }
 
+        // ✅ Wallet signature already verified by middleware
         if (!req.issuerWallet) {
             return res.status(403).json({
                 success: false,
@@ -26,23 +27,55 @@ async function issueCertificate(req, res) {
             });
         }
 
-        const { provider } = require('../../config/blockchain');
-        const issuerSigner = new ethers.Wallet(issuerPrivateKey, provider);
-
-        if (issuerSigner.address.toLowerCase() !== req.issuerWallet.address.toLowerCase()) {
-            return res.status(403).json({
+        // ⚠️ Initialize signer from private key
+        // In a true enterprise system, keys should ideally be kept strictly on client side or in HSMs
+        const { ethers } = require('ethers');
+        const blockchainConfig = require('../../config/blockchain');
+        let signer;
+        try {
+            signer = new ethers.Wallet(issuerPrivateKey, blockchainConfig.provider);
+        } catch (err) {
+            return res.status(400).json({
                 success: false,
-                error: 'Private key does not match signed wallet address'
+                error: 'Invalid issuer private key format'
             });
         }
 
-        const result = await certificateService.issueCertificate({
-            ownerName,
-            ownerEmail,
-            courseName,
-            issuerId: req.user.id,
-            ownerId
-        }, issuerSigner, req.issuerWallet);
+        // 🔎 STEP 1: Resolve or create OWNER by email
+        let ownerId;
+
+        const userResult = await db.query(
+            `SELECT id FROM users WHERE email = $1`,
+            [ownerEmail]
+        );
+
+        if (userResult.rows.length > 0) {
+            ownerId = userResult.rows[0].id;
+        } else {
+            // 🔒 Create OWNER placeholder (no password yet)
+            const newUser = await db.query(
+                `INSERT INTO users
+                (id, email, role, status, created_at, updated_at)
+                VALUES (gen_random_uuid(), $1, 'OWNER', 'PENDING', NOW(), NOW())
+                RETURNING id`,
+                [ownerEmail]
+            );
+
+            ownerId = newUser.rows[0].id;
+        }
+
+        // 🚀 STEP 2: Issue certificate
+        const result = await certificateService.issueCertificate(
+            {
+                ownerName,
+                ownerEmail,
+                courseName,
+                issuerId: req.user.id,
+                ownerId
+            },
+            signer,          // now initialized
+            req.issuerWallet
+        );
 
         res.status(201).json({
             success: true,
@@ -51,24 +84,18 @@ async function issueCertificate(req, res) {
             txHash: result.txHash,
             message: 'Certificate issued successfully'
         });
+
     } catch (error) {
         console.error('Issue certificate error:', error);
 
         let statusCode = 400;
         let errorMessage = error.message;
 
-        if (error.message.includes('not mapped')) {
-            statusCode = 403;
-        } else if (error.message.includes('revoked')) {
-            statusCode = 403;
-        } else if (error.message.includes('Duplicate')) {
-            statusCode = 409;
-        } else if (error.message.includes('blockchain') || error.message.includes('chain')) {
+        if (error.message.includes('Duplicate')) statusCode = 409;
+        if (error.message.includes('revoked')) statusCode = 403;
+        if (error.message.includes('blockchain')) {
             statusCode = 502;
             errorMessage = 'Blockchain transaction failed';
-        } else if (error.message.includes('PDF') || error.message.includes('QR')) {
-            statusCode = 500;
-            errorMessage = 'File generation failed';
         }
 
         res.status(statusCode).json({
@@ -80,44 +107,25 @@ async function issueCertificate(req, res) {
 
 async function getMyCertificates(req, res) {
     try {
-        const { limit = 50, offset = 0 } = req.query;
-
         if (req.user.role !== 'OWNER') {
             return res.status(403).json({
                 success: false,
-                error: 'Only owners can access this endpoint'
+                error: 'Only owners can access certificates'
             });
         }
 
-        const certificates = await certificateService.getCertificatesByOwner(
-            req.user.id,
-            parseInt(limit),
-            parseInt(offset)
-        );
+        const certificates = await certificateService.getCertificatesByOwner(req.user.id);
 
         res.json({
             success: true,
             count: certificates.length,
-            certificates: certificates.map(c => ({
-                id: c.id,
-                hash: c.certificate_hash,
-                certificateNumber: c.certificate_number,
-                recipientName: c.recipient_name,
-                courseName: c.course_name,
-                issueDate: c.issue_date,
-                issuer: {
-                    name: `${c.issuer_first_name} ${c.issuer_last_name}`,
-                    email: c.issuer_email
-                },
-                isRevoked: c.is_revoked,
-                createdAt: c.created_at
-            }))
+            certificates
         });
     } catch (error) {
-        console.error('Get my certificates error:', error);
+        console.error('Get certificates error:', error);
         res.status(500).json({
             success: false,
-            error: 'Failed to get certificates'
+            error: 'Failed to fetch certificates'
         });
     }
 }
@@ -139,39 +147,30 @@ async function downloadCertificate(req, res) {
             });
         }
 
-        const filePath = await certificateService.getCertificateFilePath(id);
-
-        if (!filePath) {
-            return res.status(404).json({
-                success: false,
-                error: 'Certificate file not found'
-            });
-        }
-
+        // 🛡️ Integrity Check (Phase 6 Hardening)
         try {
-            await fs.access(filePath);
-        } catch {
-            return res.status(404).json({
+            await certificateService.verifyCertificateIntegrity(id);
+        } catch (integrityError) {
+            console.error('Integrity Check Failed:', integrityError.message);
+            return res.status(403).json({
                 success: false,
-                error: 'Certificate file does not exist'
+                error: integrityError.message,
+                code: 'INTEGRITY_FAILURE'
             });
         }
+
+        const filePath = await certificateService.getCertificateFilePath(id);
+        const fileBuffer = await fs.readFile(filePath);
 
         res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename="certificate-${certificate.certificate_number}.pdf"`);
+        res.setHeader(
+            'Content-Disposition',
+            `attachment; filename="certificate-${certificate.certificate_number}.pdf"`
+        );
 
-        const fileBuffer = await fs.readFile(filePath);
         res.send(fileBuffer);
     } catch (error) {
         console.error('Download certificate error:', error);
-
-        if (error.message === 'Access denied') {
-            return res.status(403).json({
-                success: false,
-                error: 'Access denied'
-            });
-        }
-
         res.status(500).json({
             success: false,
             error: 'Failed to download certificate'

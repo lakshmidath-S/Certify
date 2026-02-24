@@ -37,7 +37,8 @@ module.exports = {
     blockchain: {
         rpcUrl: process.env.RPC_URL,
         walletRegistryAddress: process.env.CONTRACT_WALLET_REGISTRY,
-        certRegistryAddress: process.env.CONTRACT_CERT_REGISTRY
+        certRegistryAddress: process.env.CONTRACT_CERT_REGISTRY,
+        adminPrivateKey: process.env.ADMIN_PRIVATE_KEY
     },
     server: {
         port: process.env.PORT || 3000,

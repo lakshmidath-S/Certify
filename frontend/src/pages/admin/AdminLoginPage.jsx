@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { walletService } from '../../wallet/walletService';
+import { walletAuthAPI } from '../../api';
 import { useAuth } from '../../context/AuthContext';
 
 export default function AdminLoginPage() {
@@ -10,7 +11,7 @@ export default function AdminLoginPage() {
     const [loading, setLoading] = useState(false);
 
     const navigate = useNavigate();
-    const { login } = useAuth();
+    const { loginWithWallet } = useAuth();
 
     const handleConnectWallet = async () => {
         try {
@@ -28,7 +29,18 @@ export default function AdminLoginPage() {
         setLoading(true);
 
         try {
-            const user = await login('admin@certify.com', 'admin123');
+            if (!walletAddress) {
+                throw new Error('Please connect your wallet first');
+            }
+
+            // 1. Request challenge
+            const { message } = await walletAuthAPI.requestChallenge(walletAddress);
+
+            // 2. Sign message
+            const signature = await walletService.signMessage(message);
+
+            // 3. Verify and Login
+            const user = await loginWithWallet(walletAddress, signature, message);
 
             if (user.role === 'ADMIN') {
                 navigate('/admin/dashboard');
@@ -36,7 +48,8 @@ export default function AdminLoginPage() {
                 setError('Not authorized as admin');
             }
         } catch (err) {
-            setError('Admin login failed');
+            console.error(err);
+            setError(err.message || 'Admin login failed');
         } finally {
             setLoading(false);
         }

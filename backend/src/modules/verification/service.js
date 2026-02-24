@@ -1,109 +1,87 @@
 const db = require('../../db/pool');
 const { verifyCertificateOnChain, isIssuerValidOnChain } = require('../../config/blockchain');
 
-async function verifySingleCertificate(hash) {
+async function verifySingleCertificate(metadata_hash) {
+    const { hashMetadata } = require('../../utils/hashing');
+    const blockchain = require('../../config/blockchain');
+
+    // 1. Fetch from Database (Step 1)
     const dbResult = await db.query(
-        `SELECT c.*, w.wallet_address, w.is_active as wallet_active
-     FROM certificates c
-     LEFT JOIN wallets w ON c.issuer_wallet_id = w.id
-     WHERE c.certificate_hash = $1`,
-        [hash]
+        `SELECT c.*, u.status as issuer_status, u.compromise_reported_at
+         FROM certificates c
+         JOIN users u ON c.issuer_id = u.id
+         WHERE c.metadata_hash = $1`,
+        [metadata_hash]
     );
 
     if (dbResult.rows.length === 0) {
-        return {
-            status: 'NOT_FOUND',
-            exists: false,
-            valid: false,
-            message: 'Certificate not found in database'
-        };
+        return { status: 'NOT_FOUND', valid: false, message: 'Certificate not found in database' };
     }
 
     const cert = dbResult.rows[0];
 
-    let chainResult;
-    try {
-        chainResult = await verifyCertificateOnChain(hash);
-    } catch (error) {
-        return {
-            status: 'CHAIN_ERROR',
-            exists: true,
-            valid: false,
-            message: 'Failed to verify on blockchain'
-        };
-    }
+    // 2. Fetch from Blockchain (Step 2)
+    // We use the 32-byte hash (first 64 hex chars) for the blockchain lookup
+    const chainHash = metadata_hash.startsWith('0x') ? metadata_hash.slice(2, 66) : metadata_hash.slice(0, 64);
+    const chainResult = await blockchain.verifyCertificateOnChain(chainHash);
 
     if (!chainResult.exists) {
-        return {
-            status: 'NOT_ON_CHAIN',
-            exists: true,
-            valid: false,
-            message: 'Certificate not found on blockchain'
-        };
+        return { status: 'NOT_ON_CHAIN', valid: false, message: 'Certificate not verified on blockchain' };
     }
 
-    if (cert.is_revoked) {
+    // 3. Compare Hash (Integrity Check) (Step 3)
+    // Re-hash local metadata to detect DB tampering
+    let localReHash;
+    try {
+        localReHash = hashMetadata(cert.additional_info);
+    } catch (e) {
+        return { status: 'DATA_TAMPERED', valid: false, message: 'Metadata canonicalization failed' };
+    }
+
+    if (localReHash !== metadata_hash) {
+        return { status: 'DATA_TAMPERED', valid: false, message: 'Database metadata has been altered after issuance' };
+    }
+
+    // 4. Check Revocation status (Step 4)
+    if (cert.is_revoked || chainResult.revoked) {
         return {
             status: 'REVOKED',
-            exists: true,
             valid: false,
             message: 'Certificate has been revoked',
-            revokedAt: cert.revoked_at,
-            revocationReason: cert.revocation_reason
+            revokedAt: cert.revoked_at || (chainResult.revokedAt ? new Date(chainResult.revokedAt * 1000) : null)
         };
     }
 
-    if (!cert.wallet_active) {
+    // 5. Check Issuer Suspension status (Step 5)
+    if (cert.issuer_status === 'SUSPENDED') {
+        return { status: 'ISSUER_SUSPENDED', valid: false, message: 'Issuing institution is currently suspended' };
+    }
+
+    // Double check on-chain issuer status
+    const isIssuerActiveOnChain = await blockchain.isIssuerValidOnChain(chainResult.issuer);
+    if (!isIssuerActiveOnChain) {
+        return { status: 'ISSUER_SUSPENDED', valid: false, message: 'Issuer is not authorized or suspended on-chain' };
+    }
+
+    // 6. Check Issuer Compromise (Step 6)
+    if (cert.compromise_reported_at && new Date(cert.issued_at) > new Date(cert.compromise_reported_at)) {
         return {
-            status: 'ISSUER_REVOKED',
-            exists: true,
+            status: 'ISSUER_COMPROMISED',
             valid: false,
-            message: 'Issuer wallet has been revoked'
+            message: 'Certificate was issued after the issuer reported a wallet compromise'
         };
     }
 
-    let issuerValid;
-    try {
-        issuerValid = await isIssuerValidOnChain(cert.wallet_address);
-    } catch (error) {
-        return {
-            status: 'CHAIN_ERROR',
-            exists: true,
-            valid: false,
-            message: 'Failed to verify issuer on blockchain'
-        };
-    }
-
-    if (!issuerValid) {
-        return {
-            status: 'ISSUER_INVALID',
-            exists: true,
-            valid: false,
-            message: 'Issuer is no longer valid on blockchain'
-        };
-    }
-
-    if (!chainResult.isValid) {
-        return {
-            status: 'INVALID_ON_CHAIN',
-            exists: true,
-            valid: false,
-            message: 'Certificate is invalid on blockchain'
-        };
-    }
-
+    // SUCCESS
     return {
         status: 'VALID',
-        exists: true,
         valid: true,
-        message: 'Certificate is valid',
-        certificate: {
-            certificateNumber: cert.certificate_number,
+        message: 'Certificate is authentic and valid',
+        details: {
             recipientName: cert.recipient_name,
             courseName: cert.course_name,
-            issueDate: cert.issue_date,
-            issuedAt: chainResult.issuedAt,
-            txHash: cert.blockchain_tx_hash
+            issuedAt: cert.issued_at,
+            issuer: chainResult.issuer
         }
     };
 }

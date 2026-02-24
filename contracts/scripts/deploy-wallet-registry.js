@@ -22,6 +22,15 @@ async function main() {
         console.log("Network:", hre.network.name);
         console.log("Admin:", deployer.address);
 
+        // Add user's wallet as admin
+        const listAdminWallet = "0xFA258b9F026aCA36000374c795F6656f370AC33e";
+        if (listAdminWallet) {
+            console.log(`\nAdding user wallet ${listAdminWallet} as admin...`);
+            const tx = await walletRegistry.addAdmin(listAdminWallet);
+            await tx.wait();
+            console.log("✅ User wallet added as admin!");
+        }
+
         console.log("\nSave this address for CertificateRegistry deployment!");
 
     } catch (error) {

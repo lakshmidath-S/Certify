@@ -11,7 +11,7 @@ function generateCertificateHash(metadata) {
         issuedAt
     } = metadata;
 
-    const nonce = uuidv4();
+    const nonce = metadata.nonce || uuidv4();
 
     const dataString = [
         ownerName,

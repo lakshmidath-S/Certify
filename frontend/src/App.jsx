@@ -10,10 +10,13 @@ import IssuerDashboard from './pages/issuer/IssuerDashboard';
 import OwnerDashboard from './pages/owner/OwnerDashboard';
 import VerifierDashboard from './pages/verifier/VerifierDashboard';
 
+import SystemHealth from './components/SystemHealth';
+
 function App() {
     return (
         <AuthProvider>
             <BrowserRouter>
+                <SystemHealth />
                 <Routes>
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
