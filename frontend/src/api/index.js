@@ -110,4 +110,13 @@ export const verificationAPI = {
         const response = await apiClient.post('/verify/bulk', { hashes });
         return response.data;
     },
+
+    verifyUpload: async (file) => {
+        const formData = new FormData();
+        formData.append('certificate', file);
+        const response = await apiClient.post('/verify/upload', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+        return response.data;
+    },
 };

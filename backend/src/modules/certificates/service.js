@@ -42,7 +42,8 @@ async function prepareCertificate(certificateData, issuerWalletFromToken) {
         throw new Error('Issuer wallet revoked or invalid on blockchain');
     }
 
-    const { hash, nonce } = generateCertificateHash({
+    // Deterministic hash — no nonce, reproducible from canonical JSON
+    const { hash, canonicalJSON } = generateCertificateHash({
         ownerName,
         courseName,
         department,
@@ -50,11 +51,10 @@ async function prepareCertificate(certificateData, issuerWalletFromToken) {
         issueYear,
         graduationMonth,
         graduationYear,
-        issuerId,
         issuerWallet: issuerWallet.wallet_address,
     });
 
-    return { hash, nonce };
+    return { hash, canonicalJSON };
 }
 
 async function issueCertificate(certificateData, txHash, issuerWalletFromToken) {
@@ -103,9 +103,19 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
         const issuedAt = new Date().toISOString();
 
         // Use the hash from prepare step (already stored on-chain)
-        // DO NOT regenerate - the nonce is random so it would produce a different hash
         const hash = certificateData.hash;
-        const nonce = uuidv4();
+
+        // Regenerate the canonical JSON for embedding in the PDF
+        const { canonicalJSON } = generateCertificateHash({
+            ownerName,
+            courseName,
+            department,
+            issueMonth,
+            issueYear,
+            graduationMonth,
+            graduationYear,
+            issuerWallet: issuerWallet.wallet_address,
+        });
 
         const existingCert = await client.query(
             'SELECT id FROM certificates WHERE certificate_hash = $1',
@@ -127,6 +137,7 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
             ? `${issuerUserResult.rows[0].first_name} ${issuerUserResult.rows[0].last_name}`
             : 'Issuer';
 
+        // Generate PDF with embedded canonical JSON as hidden metadata
         const pdfBuffer = await generatePDF({
             ownerName,
             courseName,
@@ -136,8 +147,7 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
             graduationMonth,
             graduationYear,
             issuerName,
-            certificateHash: hash
-        }, qrBuffer);
+        }, qrBuffer, canonicalJSON);
 
         const certificateId = uuidv4();
         const pdfFilename = `${certificateId}.pdf`;
@@ -173,7 +183,7 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
                 ownerId,
                 issuerWallet.id,
                 txHash,
-                nonce,
+                '00000000-0000-0000-0000-000000000000',  // nonce no longer used — hash is deterministic
                 Date.now(),
                 JSON.stringify(additionalInfo)
             ]

@@ -129,7 +129,17 @@ async function verifyBulkCertificates(hashes) {
     return results;
 }
 
+async function verifyIssuerWallet(walletAddress) {
+    try {
+        return await isIssuerValidOnChain(walletAddress);
+    } catch (error) {
+        console.error('Issuer wallet verification error:', error);
+        return false;
+    }
+}
+
 module.exports = {
     verifySingleCertificate,
-    verifyBulkCertificates
+    verifyBulkCertificates,
+    verifyIssuerWallet
 };

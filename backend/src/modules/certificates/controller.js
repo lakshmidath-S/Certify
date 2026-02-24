@@ -40,7 +40,6 @@ async function prepareCertificate(req, res) {
         res.json({
             success: true,
             hash: result.hash,
-            nonce: result.nonce,
         });
     } catch (error) {
         console.error('Prepare certificate error:', error);
@@ -203,6 +202,19 @@ async function downloadCertificate(req, res) {
             // Extract new fields from additional_info JSONB
             const info = certificate.additional_info || {};
 
+            // Regenerate canonical JSON for embedding as metadata
+            const { generateCertificateHash } = require('./hash');
+            const { canonicalJSON } = generateCertificateHash({
+                ownerName: certificate.recipient_name,
+                courseName: certificate.course_name,
+                department: info.department || '',
+                issueMonth: info.issueMonth || '',
+                issueYear: info.issueYear || '',
+                graduationMonth: info.graduationMonth || '',
+                graduationYear: info.graduationYear || '',
+                issuerWallet: certificate.issuer_wallet_address || '',
+            });
+
             const qrBuffer = await generateQR(certificate.certificate_hash);
             fileBuffer = await generatePDF({
                 ownerName: certificate.recipient_name,
@@ -213,8 +225,7 @@ async function downloadCertificate(req, res) {
                 graduationMonth: info.graduationMonth || '',
                 graduationYear: info.graduationYear || '',
                 issuerName,
-                certificateHash: certificate.certificate_hash
-            }, qrBuffer);
+            }, qrBuffer, canonicalJSON);
         }
 
         res.setHeader('Content-Type', 'application/pdf');

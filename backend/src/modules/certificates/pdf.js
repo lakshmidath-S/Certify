@@ -10,7 +10,14 @@ function getMonthName(month) {
     return MONTHS[m] || String(month);
 }
 
-async function generatePDF(certificateData, qrBuffer) {
+/**
+ * Generate certificate PDF.
+ *
+ * @param {Object} certificateData - certificate fields
+ * @param {Buffer} qrBuffer       - QR code PNG buffer
+ * @param {string} canonicalJSON   - canonical JSON string to embed as hidden metadata
+ */
+async function generatePDF(certificateData, qrBuffer, canonicalJSON) {
     try {
         const {
             ownerName,
@@ -21,11 +28,15 @@ async function generatePDF(certificateData, qrBuffer) {
             graduationMonth,
             graduationYear,
             issuerName,
-            certificateHash
         } = certificateData;
 
         const pdfDoc = await PDFDocument.create();
         const page = pdfDoc.addPage([842, 595]); // Landscape A4
+
+        // ── Embed canonical JSON as hidden PDF metadata ──
+        if (canonicalJSON) {
+            pdfDoc.setSubject(canonicalJSON);
+        }
 
         const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
         const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
@@ -179,6 +190,29 @@ async function generatePDF(certificateData, qrBuffer) {
             thickness: 0.5, color: lightGray
         });
 
+        // ── QR Code (right side) ──
+        if (qrBuffer) {
+            const qrImage = await pdfDoc.embedPng(qrBuffer);
+            const qrSize = 100;
+            page.drawImage(qrImage, {
+                x: width - qrSize - 70,
+                y: bottomY - 25,
+                width: qrSize,
+                height: qrSize,
+            });
+
+            // "Scan to verify" label
+            const scanText = 'Scan to verify';
+            const scanWidth = helvetica.widthOfTextAtSize(scanText, 8);
+            page.drawText(scanText, {
+                x: width - 70 - qrSize / 2 - scanWidth / 2,
+                y: bottomY - 35,
+                size: 8,
+                font: helvetica,
+                color: lightGray
+            });
+        }
+
         const pdfBytes = await pdfDoc.save();
         return Buffer.from(pdfBytes);
     } catch (error) {
@@ -187,6 +221,27 @@ async function generatePDF(certificateData, qrBuffer) {
     }
 }
 
+/**
+ * Extract the embedded canonical JSON from a PDF buffer.
+ * Returns the parsed certificate data object, or null if not found.
+ */
+async function extractCertificateDataFromPDF(pdfBuffer) {
+    try {
+        const pdfDoc = await PDFDocument.load(pdfBuffer);
+        const subject = pdfDoc.getSubject();
+
+        if (!subject) {
+            return null;
+        }
+
+        return JSON.parse(subject);
+    } catch (error) {
+        console.error('PDF data extraction error:', error);
+        return null;
+    }
+}
+
 module.exports = {
-    generatePDF
+    generatePDF,
+    extractCertificateDataFromPDF
 };

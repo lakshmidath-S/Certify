@@ -1,44 +1,102 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { verificationAPI } from '../../api';
 import { StatusBadge } from '../../components/StatusBadge';
 
 export default function VerifierDashboard() {
     const navigate = useNavigate();
-    const [hashes, setHashes] = useState('');
+    const fileInputRef = useRef(null);
+    const [files, setFiles] = useState([]);
     const [results, setResults] = useState([]);
     const [summary, setSummary] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [dragActive, setDragActive] = useState(false);
+
+    const handleFiles = (newFiles) => {
+        const pdfFiles = Array.from(newFiles).filter(
+            f => f.type === 'application/pdf'
+        );
+        if (pdfFiles.length === 0) {
+            setError('Please upload PDF files only');
+            return;
+        }
+        setFiles(prev => [...prev, ...pdfFiles]);
+        setError('');
+    };
+
+    const handleDrop = (e) => {
+        e.preventDefault();
+        setDragActive(false);
+        handleFiles(e.dataTransfer.files);
+    };
+
+    const handleDragOver = (e) => {
+        e.preventDefault();
+        setDragActive(true);
+    };
+
+    const handleDragLeave = () => {
+        setDragActive(false);
+    };
+
+    const handleFileInput = (e) => {
+        handleFiles(e.target.files);
+        e.target.value = '';
+    };
+
+    const removeFile = (index) => {
+        setFiles(prev => prev.filter((_, i) => i !== index));
+    };
 
     const handleVerify = async (e) => {
         e.preventDefault();
         setError('');
         setResults([]);
         setSummary(null);
+
+        if (files.length === 0) {
+            setError('Please upload at least one certificate PDF');
+            return;
+        }
+
         setLoading(true);
 
         try {
-            const hashArray = hashes
-                .split('\n')
-                .map(h => h.trim())
-                .filter(h => h.length > 0);
+            const allResults = [];
 
-            if (hashArray.length === 0) {
-                setError('Please enter at least one hash');
-                return;
+            for (const file of files) {
+                try {
+                    const response = await verificationAPI.verifyUpload(file);
+                    allResults.push({
+                        fileName: file.name,
+                        ...response.verification
+                    });
+                } catch (err) {
+                    allResults.push({
+                        fileName: file.name,
+                        status: 'ERROR',
+                        exists: false,
+                        valid: false,
+                        message: err.response?.data?.error || 'Verification failed'
+                    });
+                }
             }
 
-            const result = await verificationAPI.verifyBulk(hashArray);
-            setResults(result.results);
-            setSummary(result.summary);
+            setResults(allResults);
+            setSummary({
+                total: allResults.length,
+                valid: allResults.filter(r => r.valid).length,
+                invalid: allResults.filter(r => !r.valid && r.exists).length,
+                notFound: allResults.filter(r => !r.exists && r.status !== 'ERROR').length,
+                errors: allResults.filter(r => r.status === 'ERROR').length
+            });
         } catch (err) {
             setError(err.response?.data?.error || 'Verification failed');
         } finally {
             setLoading(false);
         }
     };
-
 
     return (
         <div className="min-h-screen bg-gray-100">
@@ -64,7 +122,10 @@ export default function VerifierDashboard() {
             <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
                 <div className="space-y-6">
                     <div className="bg-white shadow rounded-lg p-6">
-                        <h2 className="text-xl font-semibold mb-4">Bulk Certificate Verification</h2>
+                        <h2 className="text-xl font-semibold mb-4">Certificate Verification</h2>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Upload certificate PDFs to verify their authenticity against the blockchain.
+                        </p>
 
                         {error && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
@@ -73,26 +134,69 @@ export default function VerifierDashboard() {
                         )}
 
                         <form onSubmit={handleVerify} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    Certificate Hashes (one per line)
-                                </label>
-                                <textarea
-                                    value={hashes}
-                                    onChange={(e) => setHashes(e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    rows="10"
-                                    placeholder="Enter certificate hashes, one per line..."
-                                    required
+                            {/* Drag & Drop Upload Area */}
+                            <div
+                                onDrop={handleDrop}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onClick={() => fileInputRef.current?.click()}
+                                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${dragActive
+                                        ? 'border-blue-500 bg-blue-50'
+                                        : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                                    }`}
+                            >
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept=".pdf,application/pdf"
+                                    multiple
+                                    onChange={handleFileInput}
+                                    className="hidden"
                                 />
+                                <div className="text-4xl mb-3">📄</div>
+                                <p className="text-gray-700 font-medium">
+                                    {dragActive ? 'Drop PDFs here' : 'Drag & drop certificate PDFs here'}
+                                </p>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    or click to browse files
+                                </p>
                             </div>
+
+                            {/* Selected Files List */}
+                            {files.length > 0 && (
+                                <div className="bg-gray-50 rounded-lg p-4">
+                                    <h4 className="text-sm font-medium text-gray-700 mb-2">
+                                        Selected Certificates ({files.length})
+                                    </h4>
+                                    <div className="space-y-2">
+                                        {files.map((file, index) => (
+                                            <div key={index} className="flex items-center justify-between bg-white px-3 py-2 rounded border">
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="text-red-500">📄</span>
+                                                    <span className="text-sm text-gray-700">{file.name}</span>
+                                                    <span className="text-xs text-gray-400">
+                                                        ({(file.size / 1024).toFixed(1)} KB)
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                                                    className="text-gray-400 hover:text-red-500 text-sm"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <button
                                 type="submit"
-                                disabled={loading}
-                                className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50"
+                                disabled={loading || files.length === 0}
+                                className="w-full bg-blue-600 text-white py-3 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 font-medium transition-colors"
                             >
-                                {loading ? 'Verifying...' : 'Verify Certificates'}
+                                {loading ? 'Verifying...' : `Verify Certificate${files.length !== 1 ? 's' : ''}`}
                             </button>
                         </form>
                     </div>
@@ -130,7 +234,7 @@ export default function VerifierDashboard() {
                                     <thead className="bg-gray-50">
                                         <tr>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                Hash
+                                                File
                                             </th>
                                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                 Status
@@ -149,17 +253,20 @@ export default function VerifierDashboard() {
                                     <tbody className="bg-white divide-y divide-gray-200">
                                         {results.map((result, index) => (
                                             <tr key={index}>
-                                                <td className="px-6 py-4 text-sm font-mono text-gray-900">
-                                                    {result.hash.substring(0, 16)}...
+                                                <td className="px-6 py-4 text-sm text-gray-900">
+                                                    <div className="flex items-center space-x-2">
+                                                        <span>📄</span>
+                                                        <span className="font-medium">{result.fileName}</span>
+                                                    </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <StatusBadge status={result.status} />
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm">
                                                     {result.valid ? (
-                                                        <span className="text-green-600">✓</span>
+                                                        <span className="text-green-600 text-lg">✓</span>
                                                     ) : (
-                                                        <span className="text-red-600">✗</span>
+                                                        <span className="text-red-600 text-lg">✗</span>
                                                     )}
                                                 </td>
                                                 <td className="px-6 py-4 text-sm text-gray-500">
@@ -168,9 +275,17 @@ export default function VerifierDashboard() {
                                                 <td className="px-6 py-4 text-sm text-gray-500">
                                                     {result.certificate && (
                                                         <div>
-                                                            <div>{result.certificate.recipientName}</div>
+                                                            <div className="font-medium text-gray-700">{result.certificate.recipientName}</div>
                                                             <div className="text-xs text-gray-400">
                                                                 {result.certificate.courseName}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {result.certificateData && !result.certificate && (
+                                                        <div>
+                                                            <div className="font-medium text-gray-700">{result.certificateData.ownerName}</div>
+                                                            <div className="text-xs text-gray-400">
+                                                                {result.certificateData.courseName}
                                                             </div>
                                                         </div>
                                                     )}
