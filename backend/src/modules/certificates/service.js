@@ -5,6 +5,7 @@ const db = require('../../db/pool');
 const { generateCertificateHash } = require('./hash');
 const { generateQR } = require('./qr');
 const { generatePDF } = require('./pdf');
+const { signPdfBuffer } = require('./signPdf');
 const { isIssuerValidOnChain } = require('../../config/blockchain');
 
 const STORAGE_DIR = path.join(__dirname, '../../../storage/certificates');
@@ -138,7 +139,7 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
             : 'Issuer';
 
         // Generate PDF with embedded canonical JSON as hidden metadata
-        const pdfBuffer = await generatePDF({
+        const unsignedPdfBuffer = await generatePDF({
             ownerName,
             courseName,
             department,
@@ -148,6 +149,9 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
             graduationYear,
             issuerName,
         }, qrBuffer, canonicalJSON);
+
+        // Digitally sign the PDF with the server's P12 certificate
+        const pdfBuffer = await signPdfBuffer(unsignedPdfBuffer);
 
         const certificateId = uuidv4();
         const pdfFilename = `${certificateId}.pdf`;

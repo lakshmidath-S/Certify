@@ -1,6 +1,7 @@
 const verificationService = require('./service');
 const { extractCertificateDataFromPDF } = require('../certificates/pdf');
 const { canonicalizeJSON, generateSHA256 } = require('../certificates/hash');
+const { verifyPdfSignature } = require('./verifySignature');
 
 async function verifyHash(req, res) {
     try {
@@ -115,6 +116,21 @@ async function verifyUpload(req, res) {
             return res.status(400).json({
                 success: false,
                 error: 'Only PDF files are accepted'
+            });
+        }
+
+        // Step 0: Verify PDF digital signature FIRST
+        // If the PDF has been visually modified, annotated, or tampered with,
+        // the digital signature will be invalid and we reject immediately.
+        const sigResult = verifyPdfSignature(req.file.buffer);
+        if (!sigResult.valid) {
+            return res.status(400).json({
+                success: false,
+                verification: {
+                    status: 'SIGNATURE_INVALID',
+                    valid: false,
+                    message: sigResult.reason || 'PDF digital signature is invalid or missing'
+                }
             });
         }
 

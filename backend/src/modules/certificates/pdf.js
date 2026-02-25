@@ -1,4 +1,5 @@
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { pdflibAddPlaceholder } = require('@signpdf/placeholder-pdf-lib');
 
 const MONTHS = [
     '', 'January', 'February', 'March', 'April', 'May', 'June',
@@ -213,7 +214,20 @@ async function generatePDF(certificateData, qrBuffer, canonicalJSON) {
             });
         }
 
-        const pdfBytes = await pdfDoc.save();
+        // ── Add digital signature placeholder ──
+        // This embeds the signature dictionary that @signpdf/signpdf requires.
+        // The actual signing happens after save, in the service layer.
+        pdflibAddPlaceholder({
+            pdfDoc,
+            reason: 'Certificate of Authenticity',
+            contactInfo: 'certify@example.com',
+            name: 'Certify Platform',
+            location: 'Digital',
+        });
+
+        const pdfBytes = await pdfDoc.save(
+            { useObjectStreams: false }
+        );
         return Buffer.from(pdfBytes);
     } catch (error) {
         console.error('PDF generation error:', error);
