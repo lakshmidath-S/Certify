@@ -1,14 +1,20 @@
 const fs = require('fs').promises;
 const certificateService = require('./service');
+const { generatePDF } = require('./pdf');
+const { generateQR } = require('./qr');
 
 async function prepareCertificate(req, res) {
     try {
-        const { ownerName, ownerEmail, courseName } = req.body;
+        const {
+            ownerName, ownerEmail, courseName,
+            department, issueMonth, issueYear,
+            graduationMonth, graduationYear
+        } = req.body;
 
-        if (!ownerName || !courseName) {
+        if (!ownerName || !courseName || !department || !issueMonth || !issueYear || !graduationMonth || !graduationYear) {
             return res.status(400).json({
                 success: false,
-                error: 'Required fields: ownerName, courseName'
+                error: 'Required fields: ownerName, courseName, department, issueMonth, issueYear, graduationMonth, graduationYear'
             });
         }
 
@@ -23,13 +29,17 @@ async function prepareCertificate(req, res) {
             ownerName,
             ownerEmail,
             courseName,
+            department,
+            issueMonth,
+            issueYear,
+            graduationMonth,
+            graduationYear,
             issuerId: req.user.id,
         }, req.issuerWallet);
 
         res.json({
             success: true,
             hash: result.hash,
-            nonce: result.nonce,
         });
     } catch (error) {
         console.error('Prepare certificate error:', error);
@@ -42,12 +52,17 @@ async function prepareCertificate(req, res) {
 
 async function issueCertificate(req, res) {
     try {
-        const { ownerName, ownerEmail, courseName, hash, txHash } = req.body;
+        const {
+            ownerName, ownerEmail, courseName,
+            department, issueMonth, issueYear,
+            graduationMonth, graduationYear,
+            hash, txHash
+        } = req.body;
 
-        if (!ownerName || !courseName || !hash || !txHash) {
+        if (!ownerName || !courseName || !hash || !txHash || !department || !issueMonth || !issueYear || !graduationMonth || !graduationYear) {
             return res.status(400).json({
                 success: false,
-                error: 'Required fields: ownerName, courseName, hash, txHash'
+                error: 'Required fields: ownerName, courseName, department, issueMonth, issueYear, graduationMonth, graduationYear, hash, txHash'
             });
         }
 
@@ -62,6 +77,11 @@ async function issueCertificate(req, res) {
             ownerName,
             ownerEmail,
             courseName,
+            department,
+            issueMonth,
+            issueYear,
+            graduationMonth,
+            graduationYear,
             hash,
             issuerId: req.user.id,
         }, txHash, req.issuerWallet);
@@ -129,6 +149,7 @@ async function getMyCertificates(req, res) {
                     email: c.issuer_email
                 },
                 isRevoked: c.is_revoked,
+                additionalInfo: c.additional_info,
                 createdAt: c.created_at
             }))
         });
@@ -158,28 +179,57 @@ async function downloadCertificate(req, res) {
             });
         }
 
+        // Try to read the file from disk first
         const filePath = await certificateService.getCertificateFilePath(id);
+        let fileBuffer = null;
 
-        if (!filePath) {
-            return res.status(404).json({
-                success: false,
-                error: 'Certificate file not found'
-            });
+        if (filePath) {
+            try {
+                await fs.access(filePath);
+                fileBuffer = await fs.readFile(filePath);
+            } catch {
+                // File doesn't exist on disk — will regenerate below
+                console.log(`PDF file not found on disk (${filePath}), regenerating...`);
+            }
         }
 
-        try {
-            await fs.access(filePath);
-        } catch {
-            return res.status(404).json({
-                success: false,
-                error: 'Certificate file does not exist'
+        // If file not on disk, regenerate PDF on the fly
+        if (!fileBuffer) {
+            const issuerName = certificate.issuer_first_name && certificate.issuer_last_name
+                ? `${certificate.issuer_first_name} ${certificate.issuer_last_name}`
+                : 'Issuer';
+
+            // Extract new fields from additional_info JSONB
+            const info = certificate.additional_info || {};
+
+            // Regenerate canonical JSON for embedding as metadata
+            const { generateCertificateHash } = require('./hash');
+            const { canonicalJSON } = generateCertificateHash({
+                ownerName: certificate.recipient_name,
+                courseName: certificate.course_name,
+                department: info.department || '',
+                issueMonth: info.issueMonth || '',
+                issueYear: info.issueYear || '',
+                graduationMonth: info.graduationMonth || '',
+                graduationYear: info.graduationYear || '',
+                issuerWallet: certificate.issuer_wallet_address || '',
             });
+
+            const qrBuffer = await generateQR(certificate.certificate_hash);
+            fileBuffer = await generatePDF({
+                ownerName: certificate.recipient_name,
+                courseName: certificate.course_name,
+                department: info.department || '',
+                issueMonth: info.issueMonth || '',
+                issueYear: info.issueYear || '',
+                graduationMonth: info.graduationMonth || '',
+                graduationYear: info.graduationYear || '',
+                issuerName,
+            }, qrBuffer, canonicalJSON);
         }
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename="certificate-${certificate.certificate_number}.pdf"`);
-
-        const fileBuffer = await fs.readFile(filePath);
         res.send(fileBuffer);
     } catch (error) {
         console.error('Download certificate error:', error);
@@ -220,6 +270,7 @@ async function getIssuedCertificates(req, res) {
                 courseName: c.course_name,
                 issueDate: c.issue_date,
                 txHash: c.blockchain_tx_hash,
+                additionalInfo: c.additional_info,
                 createdAt: c.created_at
             }))
         });

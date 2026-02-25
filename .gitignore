@@ -2,6 +2,9 @@
 .env
 .env.local
 .env.*.local
+*.p12
+*.pem
+backend/certs/
 
 # ===== Dependencies (large, regeneratable via npm install) =====
 node_modules/

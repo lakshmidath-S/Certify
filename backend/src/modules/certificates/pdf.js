@@ -1,135 +1,233 @@
 const { PDFDocument, rgb, StandardFonts } = require('pdf-lib');
+const { pdflibAddPlaceholder } = require('@signpdf/placeholder-pdf-lib');
 
-async function generatePDF(certificateData, qrBuffer) {
+const MONTHS = [
+    '', 'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+];
+
+function getMonthName(month) {
+    const m = parseInt(month, 10);
+    return MONTHS[m] || String(month);
+}
+
+/**
+ * Generate certificate PDF.
+ *
+ * @param {Object} certificateData - certificate fields
+ * @param {Buffer} qrBuffer       - QR code PNG buffer
+ * @param {string} canonicalJSON   - canonical JSON string to embed as hidden metadata
+ */
+async function generatePDF(certificateData, qrBuffer, canonicalJSON) {
     try {
         const {
             ownerName,
             courseName,
+            department,
+            issueMonth,
+            issueYear,
+            graduationMonth,
+            graduationYear,
             issuerName,
-            issuedAt,
-            certificateHash
         } = certificateData;
 
         const pdfDoc = await PDFDocument.create();
-        const page = pdfDoc.addPage([595, 842]);
+        const page = pdfDoc.addPage([842, 595]); // Landscape A4
 
-        const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-        const timesRomanBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+        // ── Embed canonical JSON as hidden PDF metadata ──
+        if (canonicalJSON) {
+            pdfDoc.setSubject(canonicalJSON);
+        }
+
+        const timesRoman = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+        const timesBold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
+        const timesItalic = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
         const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
         const { width, height } = page.getSize();
 
-        page.drawText('CERTIFICATE', {
-            x: width / 2 - 100,
-            y: height - 100,
-            size: 36,
-            font: timesRomanBold,
-            color: rgb(0, 0, 0.5)
-        });
+        // ── Colors ──
+        const navy = rgb(0.05, 0.1, 0.35);
+        const gold = rgb(0.72, 0.53, 0.04);
+        const darkGray = rgb(0.25, 0.25, 0.25);
+        const lightGray = rgb(0.55, 0.55, 0.55);
 
-        page.drawText('This is to certify that', {
-            x: width / 2 - 80,
-            y: height - 180,
-            size: 14,
-            font: timesRomanFont,
-            color: rgb(0, 0, 0)
-        });
-
-        page.drawText(ownerName, {
-            x: width / 2 - (ownerName.length * 6),
-            y: height - 220,
-            size: 24,
-            font: timesRomanBold,
-            color: rgb(0, 0, 0)
-        });
-
-        page.drawText('has successfully completed', {
-            x: width / 2 - 90,
-            y: height - 270,
-            size: 14,
-            font: timesRomanFont,
-            color: rgb(0, 0, 0)
-        });
-
-        page.drawText(courseName, {
-            x: width / 2 - (courseName.length * 5),
-            y: height - 310,
-            size: 20,
-            font: timesRomanBold,
-            color: rgb(0, 0, 0)
-        });
-
-        page.drawText(`Issued by: ${issuerName}`, {
-            x: 50,
-            y: height - 380,
-            size: 12,
-            font: helvetica,
-            color: rgb(0, 0, 0)
-        });
-
-        page.drawText(`Issue Date: ${new Date(issuedAt).toLocaleDateString()}`, {
-            x: 50,
-            y: height - 400,
-            size: 12,
-            font: helvetica,
-            color: rgb(0, 0, 0)
-        });
-
-        page.drawText('Certificate Hash:', {
-            x: 50,
-            y: height - 450,
-            size: 10,
-            font: helvetica,
-            color: rgb(0.3, 0.3, 0.3)
-        });
-
-        const hashLine1 = certificateHash.substring(0, 32);
-        const hashLine2 = certificateHash.substring(32);
-
-        page.drawText(hashLine1, {
-            x: 50,
-            y: height - 470,
-            size: 8,
-            font: helvetica,
-            color: rgb(0.5, 0.5, 0.5)
-        });
-
-        page.drawText(hashLine2, {
-            x: 50,
-            y: height - 485,
-            size: 8,
-            font: helvetica,
-            color: rgb(0.5, 0.5, 0.5)
-        });
-
-        const qrImage = await pdfDoc.embedPng(qrBuffer);
-        const qrDims = qrImage.scale(0.5);
-
-        page.drawImage(qrImage, {
-            x: width - qrDims.width - 50,
-            y: height - 500,
-            width: qrDims.width,
-            height: qrDims.height
-        });
-
-        page.drawText('Scan to verify', {
-            x: width - qrDims.width - 30,
-            y: height - 520,
-            size: 8,
-            font: helvetica,
-            color: rgb(0.5, 0.5, 0.5)
-        });
-
+        // ── Decorative outer border ──
         page.drawRectangle({
-            x: 40,
-            y: 40,
-            width: width - 80,
-            height: height - 80,
-            borderColor: rgb(0, 0, 0.5),
-            borderWidth: 2
+            x: 20, y: 20,
+            width: width - 40, height: height - 40,
+            borderColor: gold, borderWidth: 3
+        });
+        page.drawRectangle({
+            x: 30, y: 30,
+            width: width - 60, height: height - 60,
+            borderColor: navy, borderWidth: 1
         });
 
-        const pdfBytes = await pdfDoc.save();
+        // ── Header: "CERTIFICATE" ──
+        const certTitle = 'CERTIFICATE';
+        const titleWidth = timesBold.widthOfTextAtSize(certTitle, 40);
+        page.drawText(certTitle, {
+            x: (width - titleWidth) / 2,
+            y: height - 80,
+            size: 40,
+            font: timesBold,
+            color: navy
+        });
+
+        // ── Gold line under title ──
+        page.drawLine({
+            start: { x: width / 2 - 140, y: height - 90 },
+            end: { x: width / 2 + 140, y: height - 90 },
+            thickness: 2,
+            color: gold
+        });
+
+        // ── "This is to certify that" ──
+        const subText = 'This is to certify that';
+        const subWidth = timesItalic.widthOfTextAtSize(subText, 14);
+        page.drawText(subText, {
+            x: (width - subWidth) / 2,
+            y: height - 130,
+            size: 14,
+            font: timesItalic,
+            color: darkGray
+        });
+
+        // ── Student Name (prominent) ──
+        const nameWidth = timesBold.widthOfTextAtSize(ownerName, 30);
+        page.drawText(ownerName, {
+            x: (width - nameWidth) / 2,
+            y: height - 175,
+            size: 30,
+            font: timesBold,
+            color: navy
+        });
+
+        // ── Underline the name ──
+        page.drawLine({
+            start: { x: (width - nameWidth) / 2 - 10, y: height - 180 },
+            end: { x: (width + nameWidth) / 2 + 10, y: height - 180 },
+            thickness: 1,
+            color: gold
+        });
+
+        // ── "has successfully completed" ──
+        const completedText = 'has successfully completed the course';
+        const completedWidth = timesRoman.widthOfTextAtSize(completedText, 14);
+        page.drawText(completedText, {
+            x: (width - completedWidth) / 2,
+            y: height - 215,
+            size: 14,
+            font: timesRoman,
+            color: darkGray
+        });
+
+        // ── Course Name ──
+        const courseWidth = timesBold.widthOfTextAtSize(courseName, 22);
+        page.drawText(courseName, {
+            x: (width - courseWidth) / 2,
+            y: height - 250,
+            size: 22,
+            font: timesBold,
+            color: navy
+        });
+
+        // ── Department ──
+        if (department) {
+            const deptText = `Department of ${department}`;
+            const deptWidth = timesRoman.widthOfTextAtSize(deptText, 14);
+            page.drawText(deptText, {
+                x: (width - deptWidth) / 2,
+                y: height - 278,
+                size: 14,
+                font: timesRoman,
+                color: darkGray
+            });
+        }
+
+        // ── Graduation info ──
+        if (graduationMonth && graduationYear) {
+            const gradText = `Graduation: ${getMonthName(graduationMonth)} ${graduationYear}`;
+            const gradWidth = timesRoman.widthOfTextAtSize(gradText, 12);
+            page.drawText(gradText, {
+                x: (width - gradWidth) / 2,
+                y: height - 305,
+                size: 12,
+                font: timesRoman,
+                color: darkGray
+            });
+        }
+
+        // ── Bottom section: two columns ──
+        const bottomY = 130;
+
+        // Left column: Issuer & Date
+        page.drawText('Issued By', {
+            x: 70, y: bottomY + 40,
+            size: 10, font: helvetica, color: lightGray
+        });
+        page.drawText(issuerName || 'Authorized Issuer', {
+            x: 70, y: bottomY + 22,
+            size: 13, font: timesBold, color: darkGray
+        });
+
+        const issueDateStr = issueMonth && issueYear
+            ? `${getMonthName(issueMonth)} ${issueYear}`
+            : 'N/A';
+        page.drawText('Date of Issue', {
+            x: 70, y: bottomY - 5,
+            size: 10, font: helvetica, color: lightGray
+        });
+        page.drawText(issueDateStr, {
+            x: 70, y: bottomY - 22,
+            size: 12, font: timesRoman, color: darkGray
+        });
+
+        // ── Signature line ──
+        page.drawLine({
+            start: { x: 70, y: bottomY + 18 },
+            end: { x: 230, y: bottomY + 18 },
+            thickness: 0.5, color: lightGray
+        });
+
+        // ── QR Code (right side) ──
+        if (qrBuffer) {
+            const qrImage = await pdfDoc.embedPng(qrBuffer);
+            const qrSize = 100;
+            page.drawImage(qrImage, {
+                x: width - qrSize - 70,
+                y: bottomY - 25,
+                width: qrSize,
+                height: qrSize,
+            });
+
+            // "Scan to verify" label
+            const scanText = 'Scan to verify';
+            const scanWidth = helvetica.widthOfTextAtSize(scanText, 8);
+            page.drawText(scanText, {
+                x: width - 70 - qrSize / 2 - scanWidth / 2,
+                y: bottomY - 35,
+                size: 8,
+                font: helvetica,
+                color: lightGray
+            });
+        }
+
+        // ── Add digital signature placeholder ──
+        // This embeds the signature dictionary that @signpdf/signpdf requires.
+        // The actual signing happens after save, in the service layer.
+        pdflibAddPlaceholder({
+            pdfDoc,
+            reason: 'Certificate of Authenticity',
+            contactInfo: 'certify@example.com',
+            name: 'Certify Platform',
+            location: 'Digital',
+        });
+
+        const pdfBytes = await pdfDoc.save(
+            { useObjectStreams: false }
+        );
         return Buffer.from(pdfBytes);
     } catch (error) {
         console.error('PDF generation error:', error);
@@ -137,6 +235,27 @@ async function generatePDF(certificateData, qrBuffer) {
     }
 }
 
+/**
+ * Extract the embedded canonical JSON from a PDF buffer.
+ * Returns the parsed certificate data object, or null if not found.
+ */
+async function extractCertificateDataFromPDF(pdfBuffer) {
+    try {
+        const pdfDoc = await PDFDocument.load(pdfBuffer);
+        const subject = pdfDoc.getSubject();
+
+        if (!subject) {
+            return null;
+        }
+
+        return JSON.parse(subject);
+    } catch (error) {
+        console.error('PDF data extraction error:', error);
+        return null;
+    }
+}
+
 module.exports = {
-    generatePDF
+    generatePDF,
+    extractCertificateDataFromPDF
 };
