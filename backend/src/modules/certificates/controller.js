@@ -1,7 +1,10 @@
 const fs = require('fs').promises;
+const path = require('path');
 const certificateService = require('./service');
 const { generatePDF } = require('./pdf');
 const { generateQR } = require('./qr');
+
+const STORAGE_DIR = path.join(__dirname, '../../../storage/certificates');
 
 async function prepareCertificate(req, res) {
     try {
@@ -180,7 +183,11 @@ async function downloadCertificate(req, res) {
         }
 
         // Try to read the file from disk first
-        const filePath = await certificateService.getCertificateFilePath(id);
+        const storedPath = await certificateService.getCertificateFilePath(id);
+        // Resolve relative filename → absolute path on THIS machine
+        const filePath = storedPath
+            ? (path.isAbsolute(storedPath) ? storedPath : path.join(STORAGE_DIR, storedPath))
+            : null;
         let fileBuffer = null;
 
         if (filePath) {

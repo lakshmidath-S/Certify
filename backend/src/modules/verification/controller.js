@@ -1,7 +1,6 @@
 const verificationService = require('./service');
 const { extractCertificateDataFromPDF } = require('../certificates/pdf');
 const { canonicalizeJSON, generateSHA256 } = require('../certificates/hash');
-const { verifyPdfSignature } = require('./verifySignature');
 
 async function verifyHash(req, res) {
     try {
@@ -119,28 +118,18 @@ async function verifyUpload(req, res) {
             });
         }
 
-        // Step 0: Verify PDF digital signature FIRST
-        // If the PDF has been visually modified, annotated, or tampered with,
-        // the digital signature will be invalid and we reject immediately.
-        const sigResult = verifyPdfSignature(req.file.buffer);
-        if (!sigResult.valid) {
-            return res.status(400).json({
-                success: false,
-                verification: {
-                    status: 'SIGNATURE_INVALID',
-                    valid: false,
-                    message: sigResult.reason || 'PDF digital signature is invalid or missing'
-                }
-            });
-        }
-
         // Step 1: Extract embedded certificate data from PDF metadata
         const certData = await extractCertificateDataFromPDF(req.file.buffer);
 
         if (!certData) {
-            return res.status(400).json({
-                success: false,
-                error: 'No certificate data found in PDF. This may not be a valid Certify certificate.'
+            return res.json({
+                success: true,
+                verification: {
+                    status: 'INVALID',
+                    valid: false,
+                    exists: false,
+                    message: 'No certificate data found in PDF. This may not be a valid Certify certificate.'
+                }
             });
         }
 
@@ -148,9 +137,14 @@ async function verifyUpload(req, res) {
         const requiredFields = ['ownerName', 'courseName', 'issuerWallet'];
         const missingFields = requiredFields.filter(f => !certData[f]);
         if (missingFields.length > 0) {
-            return res.status(400).json({
-                success: false,
-                error: `Invalid certificate data. Missing fields: ${missingFields.join(', ')}`
+            return res.json({
+                success: true,
+                verification: {
+                    status: 'INVALID',
+                    valid: false,
+                    exists: false,
+                    message: `Invalid certificate data. Missing fields: ${missingFields.join(', ')}`
+                }
             });
         }
 
