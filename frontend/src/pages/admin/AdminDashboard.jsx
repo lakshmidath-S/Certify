@@ -214,6 +214,7 @@ export default function AdminDashboard() {
                                                 <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Institution</th>
                                                 <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Email</th>
                                                 <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Wallet</th>
+                                                <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Status</th>
                                                 <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Created</th>
                                             </tr>
                                         </thead>
@@ -233,14 +234,34 @@ export default function AdminDashboard() {
                                                     </td>
                                                     <td className="px-8 py-5 whitespace-nowrap">
                                                         {issuer.wallet_address ? (
-                                                            <span className="inline-flex items-center px-2.5 py-1 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-medium font-mono">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>
-                                                                {issuer.wallet_address.substring(0, 6)}...{issuer.wallet_address.substring(38)}
-                                                            </span>
+                                                            issuer.revoked_at ? (
+                                                                <span className="inline-flex items-center px-2.5 py-1 rounded border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-medium font-mono">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></span>
+                                                                    {issuer.wallet_address.substring(0, 6)}...{issuer.wallet_address.substring(38)}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2.5 py-1 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-medium font-mono">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>
+                                                                    {issuer.wallet_address.substring(0, 6)}...{issuer.wallet_address.substring(38)}
+                                                                </span>
+                                                            )
                                                         ) : (
                                                             <span className="inline-flex items-center px-2.5 py-1 rounded border border-yellow-500/20 bg-yellow-500/10 text-yellow-500 text-xs font-medium">
                                                                 <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-2"></span>
                                                                 Not mapped
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-8 py-5 whitespace-nowrap">
+                                                        {issuer.status === 'REVOKED' ? (
+                                                            <span className="inline-flex items-center px-2.5 py-1 rounded border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold uppercase tracking-wide">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></span>
+                                                                Revoked
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2.5 py-1 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-semibold uppercase tracking-wide">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>
+                                                                Active
                                                             </span>
                                                         )}
                                                     </td>
