@@ -88,9 +88,7 @@ export default function VerifierDashboard() {
             setSummary({
                 total: allResults.length,
                 valid: allResults.filter(r => r.valid).length,
-                invalid: allResults.filter(r => !r.valid && r.exists).length,
-                notFound: allResults.filter(r => !r.exists && r.status !== 'ERROR').length,
-                errors: allResults.filter(r => r.status === 'ERROR').length
+                invalid: allResults.filter(r => !r.valid).length,
             });
         } catch (err) {
             setError(err.response?.data?.error || 'Verification failed');
@@ -232,7 +230,7 @@ export default function VerifierDashboard() {
                     {/* Results Section */}
                     <div className="lg:col-span-8 space-y-8">
                         {summary && (
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-3 gap-4">
                                 <div className="bg-gradient-to-br from-[#111111] to-[#0A0A0A] p-6 rounded-[24px] border border-white/[0.08] text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
                                     <div className="text-3xl font-semibold text-white mb-1">{summary.total}</div>
                                     <div className="text-sm text-[#A1A1A1]">Total</div>
@@ -244,10 +242,6 @@ export default function VerifierDashboard() {
                                 <div className="bg-red-500/5 p-6 rounded-[24px] border border-red-500/20 text-center shadow-[inset_0_1px_0_rgba(239,68,68,0.1)]">
                                     <div className="text-3xl font-semibold text-red-400 mb-1">{summary.invalid}</div>
                                     <div className="text-sm text-red-500/70">Invalid</div>
-                                </div>
-                                <div className="bg-yellow-500/5 p-6 rounded-[24px] border border-yellow-500/20 text-center shadow-[inset_0_1px_0_rgba(245,158,11,0.1)]">
-                                    <div className="text-3xl font-semibold text-yellow-400 mb-1">{summary.notFound}</div>
-                                    <div className="text-sm text-yellow-500/70">Not Found</div>
                                 </div>
                             </div>
                         )}
@@ -287,14 +281,23 @@ export default function VerifierDashboard() {
                                                     </td>
                                                     <td className="px-4 py-4 text-sm text-[#A1A1A1]">
                                                         <div className="font-medium text-white mb-1">{result.message}</div>
-                                                        {result.certificate && (
+                                                        {result.certificate && result.certificate.recipientName ? (
                                                             <div className="text-xs">
                                                                 <span className="text-white">{result.certificate.recipientName}</span> • {result.certificate.courseName}
+                                                                {result.certificate.certificateNumber && (
+                                                                    <div className="text-[#A1A1A1] mt-0.5">ID: {result.certificate.certificateNumber}</div>
+                                                                )}
                                                             </div>
-                                                        )}
-                                                        {result.certificateData && !result.certificate && (
+                                                        ) : result.certificateData ? (
                                                             <div className="text-xs">
                                                                 <span className="text-white">{result.certificateData.ownerName}</span> • {result.certificateData.courseName}
+                                                                <div className="text-emerald-500/70 mt-0.5 font-medium">Verified from PDF Metadata</div>
+                                                            </div>
+                                                        ) : result.certificate && result.certificate.issuedAt && (
+                                                            <div className="text-xs">
+                                                                <span className="text-[#A1A1A1]">Issued At: </span>
+                                                                <span className="text-white">{new Date(result.certificate.issuedAt * 1000).toLocaleDateString()}</span>
+                                                                <div className="text-emerald-500/70 mt-0.5 font-medium">Verified from Blockchain</div>
                                                             </div>
                                                         )}
                                                     </td>

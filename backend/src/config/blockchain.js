@@ -52,7 +52,9 @@ async function isIssuerValidOnChain(address) {
 async function mapWalletOnChain(issuerAddress, adminSigner) {
     try {
         const walletRegistryWithSigner = walletRegistry.connect(adminSigner);
-        const tx = await walletRegistryWithSigner.mapWallet(issuerAddress);
+        // Use explicit nonce to avoid stale-nonce issues across sequential transactions
+        const nonce = await adminSigner.getNonce();
+        const tx = await walletRegistryWithSigner.mapWallet(issuerAddress, { nonce });
         const receipt = await tx.wait();
 
         return {
@@ -62,14 +64,17 @@ async function mapWalletOnChain(issuerAddress, adminSigner) {
         };
     } catch (error) {
         console.error('Error mapping wallet on-chain:', error);
-        throw new Error('Failed to map wallet on blockchain');
+        // Extract the real revert reason if available
+        const reason = error?.reason || error?.data?.message || error?.shortMessage || error?.message || 'Failed to map wallet on blockchain';
+        throw new Error(reason);
     }
 }
 
 async function revokeWalletOnChain(issuerAddress, adminSigner) {
     try {
         const walletRegistryWithSigner = walletRegistry.connect(adminSigner);
-        const tx = await walletRegistryWithSigner.revokeWallet(issuerAddress);
+        const nonce = await adminSigner.getNonce();
+        const tx = await walletRegistryWithSigner.revokeWallet(issuerAddress, { nonce });
         const receipt = await tx.wait();
 
         return {
@@ -79,7 +84,8 @@ async function revokeWalletOnChain(issuerAddress, adminSigner) {
         };
     } catch (error) {
         console.error('Error revoking wallet on-chain:', error);
-        throw new Error('Failed to revoke wallet on blockchain');
+        const reason = error?.reason || error?.data?.message || error?.shortMessage || error?.message || 'Failed to revoke wallet on blockchain';
+        throw new Error(reason);
     }
 }
 

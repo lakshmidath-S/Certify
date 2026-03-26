@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DashboardLayout } from '../../components/DashboardLayout';
-import { BadgeCheck, Plus, Link as LinkIcon, Ban, RefreshCw, CheckCircle, AlertTriangle } from 'lucide-react';
+import { BadgeCheck, Plus, Link as LinkIcon, Ban, RefreshCw, CheckCircle, AlertTriangle, Copy, X, KeyRound } from 'lucide-react';
 import { walletAPI } from '../../api';
 import axios from 'axios';
 
@@ -33,6 +33,18 @@ export default function AdminDashboard() {
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Password modal state
+    const [createdIssuer, setCreatedIssuer] = useState(null); // { email, tempPassword, institutionName }
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyPassword = () => {
+        if (!createdIssuer) return;
+        navigator.clipboard.writeText(createdIssuer.tempPassword).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
 
     const token = localStorage.getItem('token');
     const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
@@ -69,7 +81,11 @@ export default function AdminDashboard() {
                 authHeaders
             );
 
-            setMessage(`Issuer "${institutionName}" created! Temp Password: ${result.data.tempPassword}`);
+            setCreatedIssuer({
+                institutionName,
+                email: officialEmail,
+                tempPassword: result.data.tempPassword
+            });
             setInstitutionName('');
             setOfficialEmail('');
             setContactPerson('');
@@ -133,6 +149,69 @@ export default function AdminDashboard() {
 
     return (
         <DashboardLayout title="Admin Area">
+
+            {/* ===== TEMP PASSWORD MODAL ===== */}
+            {createdIssuer && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="bg-[#111111] border border-white/[0.12] rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl shadow-black/50 animate-fade-in-up">
+                        <div className="flex items-center justify-between mb-6">
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                    <KeyRound className="w-5 h-5 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-semibold text-lg">Issuer Created!</h3>
+                                    <p className="text-[#A1A1A1] text-xs">Save this password — it won't be shown again</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={() => setCreatedIssuer(null)}
+                                className="text-[#A1A1A1] hover:text-white transition-colors p-1"
+                            >
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 mb-6">
+                            <div>
+                                <p className="text-xs text-[#A1A1A1] uppercase tracking-wider mb-1">Institution</p>
+                                <p className="text-white font-medium">{createdIssuer.institutionName}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-[#A1A1A1] uppercase tracking-wider mb-1">Login Email</p>
+                                <p className="text-white font-mono text-sm">{createdIssuer.email}</p>
+                            </div>
+                            <div>
+                                <p className="text-xs text-[#A1A1A1] uppercase tracking-wider mb-2">Temporary Password</p>
+                                <div className="flex items-center gap-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl px-4 py-3">
+                                    <span className="flex-1 text-white font-mono text-sm tracking-widest select-all">{createdIssuer.tempPassword}</span>
+                                    <button
+                                        onClick={handleCopyPassword}
+                                        className="text-[#A1A1A1] hover:text-white transition-colors flex-shrink-0"
+                                        title="Copy password"
+                                    >
+                                        {copied
+                                            ? <CheckCircle className="w-4 h-4 text-emerald-400" />
+                                            : <Copy className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl px-4 py-3 text-yellow-400 text-xs mb-6 flex items-start gap-2">
+                            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                            <span>Share this password securely with the institution. It cannot be recovered after closing this dialog.</span>
+                        </div>
+
+                        <button
+                            onClick={() => setCreatedIssuer(null)}
+                            className="w-full rounded-full bg-white text-black font-semibold py-3 hover:bg-white/90 transition-all"
+                        >
+                            I've saved the password
+                        </button>
+                    </div>
+                </div>
+            )}
             <div className="space-y-6 animate-fade-in-up">
 
                 <div className="flex items-center justify-between mb-8">
@@ -214,6 +293,7 @@ export default function AdminDashboard() {
                                                 <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Institution</th>
                                                 <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Email</th>
                                                 <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Wallet</th>
+                                                <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Status</th>
                                                 <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Created</th>
                                             </tr>
                                         </thead>
@@ -233,14 +313,34 @@ export default function AdminDashboard() {
                                                     </td>
                                                     <td className="px-8 py-5 whitespace-nowrap">
                                                         {issuer.wallet_address ? (
-                                                            <span className="inline-flex items-center px-2.5 py-1 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-medium font-mono">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>
-                                                                {issuer.wallet_address.substring(0, 6)}...{issuer.wallet_address.substring(38)}
-                                                            </span>
+                                                            issuer.revoked_at ? (
+                                                                <span className="inline-flex items-center px-2.5 py-1 rounded border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-medium font-mono">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></span>
+                                                                    {issuer.wallet_address.substring(0, 6)}...{issuer.wallet_address.substring(38)}
+                                                                </span>
+                                                            ) : (
+                                                                <span className="inline-flex items-center px-2.5 py-1 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-medium font-mono">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>
+                                                                    {issuer.wallet_address.substring(0, 6)}...{issuer.wallet_address.substring(38)}
+                                                                </span>
+                                                            )
                                                         ) : (
                                                             <span className="inline-flex items-center px-2.5 py-1 rounded border border-yellow-500/20 bg-yellow-500/10 text-yellow-500 text-xs font-medium">
                                                                 <span className="w-1.5 h-1.5 rounded-full bg-yellow-500 mr-2"></span>
                                                                 Not mapped
+                                                            </span>
+                                                        )}
+                                                    </td>
+                                                    <td className="px-8 py-5 whitespace-nowrap">
+                                                        {issuer.status === 'REVOKED' ? (
+                                                            <span className="inline-flex items-center px-2.5 py-1 rounded border border-red-500/20 bg-red-500/10 text-red-400 text-xs font-semibold uppercase tracking-wide">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-red-500 mr-2"></span>
+                                                                Revoked
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center px-2.5 py-1 rounded border border-emerald-500/20 bg-emerald-500/10 text-emerald-400 text-xs font-semibold uppercase tracking-wide">
+                                                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span>
+                                                                Active
                                                             </span>
                                                         )}
                                                     </td>

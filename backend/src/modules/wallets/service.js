@@ -73,6 +73,12 @@ async function revokeWallet(walletAddress, revokedBy, reason, adminSigner) {
             [blockchainResult.txHash, walletAddress]
         );
 
+        // Also update the issuer's user status to REVOKED
+        await client.query(
+            `UPDATE users SET status = 'REVOKED' WHERE id = $1`,
+            [wallet.rows[0].user_id]
+        );
+
         await client.query(
             `INSERT INTO revocations (revocation_type, wallet_id, revoked_by, reason, blockchain_tx_hash)
        VALUES ($1, $2, $3, $4, $5)`,
