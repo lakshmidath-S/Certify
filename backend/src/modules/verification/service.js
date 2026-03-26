@@ -1,33 +1,21 @@
 const db = require('../../db/pool');
 const { verifyCertificateOnChain, isIssuerValidOnChain } = require('../../config/blockchain');
+const { extractCertificateDataFromPDF } = require('../certificates/pdf');
+const { generateCertificateHash } = require('../certificates/hash');
 
+/**
+ * Verify a certificate hash against Blockchain (Primary Truth) 
+ * and optionally hydrate with Database data.
+ */
 async function verifySingleCertificate(hash) {
-    const dbResult = await db.query(
-        `SELECT c.*, w.wallet_address, w.is_active as wallet_active
-     FROM certificates c
-     LEFT JOIN wallets w ON c.issuer_wallet_id = w.id
-     WHERE c.certificate_hash = $1`,
-        [hash]
-    );
-
-    if (dbResult.rows.length === 0) {
-        return {
-            status: 'NOT_FOUND',
-            exists: false,
-            valid: false,
-            message: 'Certificate not found in database'
-        };
-    }
-
-    const cert = dbResult.rows[0];
-
+    // 1. Check Blockchain FIRST
     let chainResult;
     try {
         chainResult = await verifyCertificateOnChain(hash);
     } catch (error) {
         return {
             status: 'CHAIN_ERROR',
-            exists: true,
+            exists: false,
             valid: false,
             message: 'Failed to verify on blockchain'
         };
@@ -36,42 +24,56 @@ async function verifySingleCertificate(hash) {
     if (!chainResult.exists) {
         return {
             status: 'NOT_ON_CHAIN',
-            exists: true,
+            exists: false,
             valid: false,
             message: 'Certificate not found on blockchain'
         };
     }
 
-    if (cert.is_revoked) {
+    // 2. Check Database for hydration (Optional)
+    const dbResult = await db.query(
+        `SELECT c.*, w.wallet_address, w.is_active as wallet_active
+     FROM certificates c
+     LEFT JOIN wallets w ON c.issuer_wallet_id = w.id
+     WHERE c.certificate_hash = $1`,
+        [hash]
+    ).catch(err => {
+        console.warn('Database hydration failed (optional):', err.message);
+        return { rows: [] };
+    });
+
+    const cert = dbResult.rows[0];
+
+    // 3. Evaluate Validity based on Chain + (DB if present)
+    if (cert && cert.is_revoked) {
         return {
             status: 'REVOKED',
             exists: true,
             valid: false,
-            message: 'Certificate has been revoked',
+            message: 'Certificate marked as revoked in database',
             revokedAt: cert.revoked_at,
             revocationReason: cert.revocation_reason
         };
     }
 
-    if (!cert.wallet_active) {
+    if (chainResult.revoked) {
         return {
-            status: 'ISSUER_REVOKED',
+            status: 'REVOKED_ON_CHAIN',
             exists: true,
             valid: false,
-            message: 'Issuer wallet has been revoked'
+            message: 'Certificate has been revoked on blockchain',
+            revokedAt: chainResult.revokedAt
         };
     }
 
-    let issuerValid;
+    // 4. Verify Issuer
+    const issuerAddress = cert ? cert.wallet_address : chainResult.issuer;
+    let issuerValid = false;
     try {
-        issuerValid = await isIssuerValidOnChain(cert.wallet_address);
+        issuerValid = await isIssuerValidOnChain(issuerAddress);
     } catch (error) {
-        return {
-            status: 'CHAIN_ERROR',
-            exists: true,
-            valid: false,
-            message: 'Failed to verify issuer on blockchain'
-        };
+        // Fallback to DB active flag if chain fails
+        if (cert) issuerValid = cert.wallet_active;
     }
 
     if (!issuerValid) {
@@ -79,32 +81,55 @@ async function verifySingleCertificate(hash) {
             status: 'ISSUER_INVALID',
             exists: true,
             valid: false,
-            message: 'Issuer is no longer valid on blockchain'
+            message: 'Issuer is no longer authorized on blockchain'
         };
     }
 
-    if (!chainResult.isValid) {
-        return {
-            status: 'INVALID_ON_CHAIN',
-            exists: true,
-            valid: false,
-            message: 'Certificate is invalid on blockchain'
-        };
-    }
-
+    // 5. Success
     return {
         status: 'VALID',
         exists: true,
         valid: true,
         message: 'Certificate is valid',
-        certificate: {
+        certificate: cert ? {
             certificateNumber: cert.certificate_number,
             recipientName: cert.recipient_name,
             courseName: cert.course_name,
             issueDate: cert.issue_date,
             issuedAt: chainResult.issuedAt,
             txHash: cert.blockchain_tx_hash
+        } : {
+            // Minimal data from chain if DB is missing
+            issuer: chainResult.issuer,
+            issuedAt: chainResult.issuedAt
         }
+    };
+}
+
+/**
+ * Perform purely stateless verification from a PDF buffer.
+ */
+async function verifyFileStateless(pdfBuffer) {
+    // 1. Extract metadata from PDF
+    const certData = await extractCertificateDataFromPDF(pdfBuffer);
+    if (!certData) {
+        throw new Error('No certificate metadata found in PDF');
+    }
+
+    // 2. Recompute Hash
+    const { hash } = generateCertificateHash(certData);
+
+    // 3. Verify via Blockchain (Primary) and DB (Hydration)
+    const result = await verifySingleCertificate(hash);
+
+    // 4. Add extracted data if DB hydration failed
+    if (result.valid && !result.certificate.recipientName) {
+        result.certificateData = certData;
+    }
+
+    return {
+        ...result,
+        hash
     };
 }
 
@@ -141,5 +166,6 @@ async function verifyIssuerWallet(walletAddress) {
 module.exports = {
     verifySingleCertificate,
     verifyBulkCertificates,
-    verifyIssuerWallet
+    verifyIssuerWallet,
+    verifyFileStateless
 };
