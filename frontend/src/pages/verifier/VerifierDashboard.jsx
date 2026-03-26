@@ -287,14 +287,23 @@ export default function VerifierDashboard() {
                                                     </td>
                                                     <td className="px-4 py-4 text-sm text-[#A1A1A1]">
                                                         <div className="font-medium text-white mb-1">{result.message}</div>
-                                                        {result.certificate && (
+                                                        {result.certificate && result.certificate.recipientName ? (
                                                             <div className="text-xs">
                                                                 <span className="text-white">{result.certificate.recipientName}</span> • {result.certificate.courseName}
+                                                                {result.certificate.certificateNumber && (
+                                                                    <div className="text-[#A1A1A1] mt-0.5">ID: {result.certificate.certificateNumber}</div>
+                                                                )}
                                                             </div>
-                                                        )}
-                                                        {result.certificateData && !result.certificate && (
+                                                        ) : result.certificateData ? (
                                                             <div className="text-xs">
                                                                 <span className="text-white">{result.certificateData.ownerName}</span> • {result.certificateData.courseName}
+                                                                <div className="text-emerald-500/70 mt-0.5 font-medium">Verified from PDF Metadata</div>
+                                                            </div>
+                                                        ) : result.certificate && result.certificate.issuedAt && (
+                                                            <div className="text-xs">
+                                                                <span className="text-[#A1A1A1]">Issued At: </span>
+                                                                <span className="text-white">{new Date(result.certificate.issuedAt * 1000).toLocaleDateString()}</span>
+                                                                <div className="text-emerald-500/70 mt-0.5 font-medium">Verified from Blockchain</div>
                                                             </div>
                                                         )}
                                                     </td>

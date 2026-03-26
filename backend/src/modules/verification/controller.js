@@ -102,6 +102,14 @@ async function verifyBulk(req, res) {
  *   3. Verify computed hash against DB + blockchain
  *   4. Verify issuer wallet is authorized
  */
+/**
+ * Verify an uploaded certificate PDF.
+ *
+ * Secure flow: "Verify-then-Hydrate"
+ *   1. Extract metadata and compute hash (Stateless)
+ *   2. Check Blockchain (Truth)
+ *   3. Hydrate from DB (Optional enrichment)
+ */
 async function verifyUpload(req, res) {
     try {
         if (!req.file) {
@@ -111,7 +119,6 @@ async function verifyUpload(req, res) {
             });
         }
 
-        // Only accept PDF files
         if (req.file.mimetype !== 'application/pdf') {
             return res.status(400).json({
                 success: false,
@@ -119,9 +126,7 @@ async function verifyUpload(req, res) {
             });
         }
 
-        // Step 0: Verify PDF digital signature FIRST
-        // If the PDF has been visually modified, annotated, or tampered with,
-        // the digital signature will be invalid and we reject immediately.
+        // Step 1: Verify PDF digital signature
         const sigResult = verifyPdfSignature(req.file.buffer);
         if (!sigResult.valid) {
             return res.status(400).json({
@@ -134,66 +139,18 @@ async function verifyUpload(req, res) {
             });
         }
 
-        // Step 1: Extract embedded certificate data from PDF metadata
-        const certData = await extractCertificateDataFromPDF(req.file.buffer);
-
-        if (!certData) {
-            return res.status(400).json({
-                success: false,
-                error: 'No certificate data found in PDF. This may not be a valid Certify certificate.'
-            });
-        }
-
-        // Validate required fields exist
-        const requiredFields = ['ownerName', 'courseName', 'issuerWallet'];
-        const missingFields = requiredFields.filter(f => !certData[f]);
-        if (missingFields.length > 0) {
-            return res.status(400).json({
-                success: false,
-                error: `Invalid certificate data. Missing fields: ${missingFields.join(', ')}`
-            });
-        }
-
-        // Step 2: Recompute hash from extracted canonical JSON
-        // NEVER trust any embedded hash — always recompute
-        const canonical = canonicalizeJSON(certData);
-        const canonicalJSON = JSON.stringify(canonical);
-        const computedHash = generateSHA256(canonicalJSON);
-
-        // Step 3: Verify computed hash against DB + blockchain
-        const result = await verificationService.verifySingleCertificate(computedHash);
-
-        // Step 4: Additional issuer wallet verification
-        if (result.valid && certData.issuerWallet) {
-            const issuerVerified = await verificationService.verifyIssuerWallet(certData.issuerWallet);
-            if (!issuerVerified) {
-                result.status = 'ISSUER_INVALID';
-                result.valid = false;
-                result.message = 'Issuer wallet is no longer authorized';
-            }
-        }
+        // Step 2-4: Use Stateless Service (Extract -> Re-hash -> Chain Check -> DB Hydrate)
+        const result = await verificationService.verifyFileStateless(req.file.buffer);
 
         res.json({
             success: true,
-            verification: {
-                ...result,
-                hash: computedHash,
-                certificateData: {
-                    ownerName: certData.ownerName,
-                    courseName: certData.courseName,
-                    department: certData.department,
-                    issueMonth: certData.issueMonth,
-                    issueYear: certData.issueYear,
-                    graduationMonth: certData.graduationMonth,
-                    graduationYear: certData.graduationYear,
-                }
-            }
+            verification: result
         });
     } catch (error) {
         console.error('Verify upload error:', error);
-        res.status(500).json({
+        res.status(400).json({
             success: false,
-            error: 'Certificate verification failed'
+            error: error.message || 'Certificate verification failed'
         });
     }
 }
