@@ -90,7 +90,7 @@ async function listIssuers(adminUserId) {
 
     const issuers = await db.query(
         `SELECT u.id, u.email, u.first_name as institution_name, u.created_at,
-            w.wallet_address
+            u.status, w.wallet_address, w.revoked_at
      FROM users u
      LEFT JOIN wallets w ON u.id = w.user_id
      WHERE u.role = 'ISSUER'

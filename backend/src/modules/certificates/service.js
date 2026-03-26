@@ -196,7 +196,7 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
         await client.query(
             `INSERT INTO certificate_files (certificate_id, file_type, file_path, file_size_bytes, mime_type)
        VALUES ($1, $2, $3, $4, $5)`,
-            [certificateId, 'PDF', pdfPath, pdfBuffer.length, 'application/pdf']
+            [certificateId, 'PDF', pdfFilename, pdfBuffer.length, 'application/pdf']
         );
 
         await client.query(

@@ -1,7 +1,4 @@
 const verificationService = require('./service');
-const { extractCertificateDataFromPDF } = require('../certificates/pdf');
-const { canonicalizeJSON, generateSHA256 } = require('../certificates/hash');
-const { verifyPdfSignature } = require('./verifySignature');
 
 async function verifyHash(req, res) {
     try {
@@ -96,15 +93,6 @@ async function verifyBulk(req, res) {
 /**
  * Verify an uploaded certificate PDF.
  *
- * Secure flow:
- *   1. Extract embedded canonical JSON from PDF metadata
- *   2. Recompute SHA-256 hash from canonical JSON (never trust embedded hash)
- *   3. Verify computed hash against DB + blockchain
- *   4. Verify issuer wallet is authorized
- */
-/**
- * Verify an uploaded certificate PDF.
- *
  * Secure flow: "Verify-then-Hydrate"
  *   1. Extract metadata and compute hash (Stateless)
  *   2. Check Blockchain (Truth)
@@ -126,20 +114,7 @@ async function verifyUpload(req, res) {
             });
         }
 
-        // Step 1: Verify PDF digital signature
-        const sigResult = verifyPdfSignature(req.file.buffer);
-        if (!sigResult.valid) {
-            return res.status(400).json({
-                success: false,
-                verification: {
-                    status: 'SIGNATURE_INVALID',
-                    valid: false,
-                    message: sigResult.reason || 'PDF digital signature is invalid or missing'
-                }
-            });
-        }
-
-        // Step 2-4: Use Stateless Service (Extract -> Re-hash -> Chain Check -> DB Hydrate)
+        // Use Stateless Service (Extract -> Re-hash -> Chain Check -> DB Hydrate)
         const result = await verificationService.verifyFileStateless(req.file.buffer);
 
         res.json({
@@ -148,6 +123,20 @@ async function verifyUpload(req, res) {
         });
     } catch (error) {
         console.error('Verify upload error:', error);
+
+        // Handle "no certificate metadata" gracefully as a verification result, not an error
+        if (error.message && error.message.includes('No certificate metadata')) {
+            return res.json({
+                success: true,
+                verification: {
+                    status: 'INVALID',
+                    valid: false,
+                    exists: false,
+                    message: 'No certificate data found in PDF. This may not be a valid Certify certificate.'
+                }
+            });
+        }
+
         res.status(400).json({
             success: false,
             error: error.message || 'Certificate verification failed'
