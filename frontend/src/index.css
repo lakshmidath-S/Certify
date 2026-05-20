@@ -2,13 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+* {
+  font-weight: 700 !important;
+}
+
 body {
   margin: 0;
-  background-color: #050505;
-  background-image: linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  background-position: center top;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f0f7ff;
+  background-image:
+    radial-gradient(circle, #93c5fd 1.5px, transparent 1.5px),
+    radial-gradient(circle, #bfdbfe 1px, transparent 1px),
+    radial-gradient(circle, #dbeafe 2.5px, transparent 2.5px);
+  background-size: 24px 24px, 48px 48px, 80px 80px;
+  background-position: 0 0, 12px 12px, 36px 36px;
 }
 
 code {

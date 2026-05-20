@@ -98,39 +98,39 @@ export default function StudentOnboardPage() {
     };
 
     return (
-        <div className="min-h-screen text-white font-sans flex items-center justify-center px-4 overflow-hidden selection:bg-white/30">
+        <div className="min-h-screen text-gray-900 font-sans flex items-center justify-center px-4 overflow-hidden selection:bg-blue-500/30">
             {/* Background elements handled via index.css globally */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[40%] h-[40%] bg-white/[0.02] rounded-full blur-[100px]"></div>
+                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[40%] h-[40%] bg-blue-500/5 rounded-full blur-[100px]"></div>
             </div>
 
-            <div className="relative z-10 max-w-md w-full bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-md p-10 animate-fade-in-up">
-                <div className="text-center mb-8 flex flex-col items-center">
-                    <div className="mb-6 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                        <GraduationCap className="w-6 h-6 text-white stroke-[1.5]" />
+            <div className="relative z-10 max-w-md w-full bg-white rounded-[28px] border-2 border-blue-400 shadow-[0_8px_32px_rgb(37,99,235,0.18)] backdrop-blur-md p-10 animate-fade-in-up">
+                <div className="text-center mb-8 flex flex-col items-center mt-2">
+                    <div className="mb-6 w-12 h-12 flex items-center justify-center rounded-2xl bg-blue-50 border border-blue-200 shadow-sm">
+                        <GraduationCap className="w-6 h-6 text-blue-600 stroke-[1.5]" />
                     </div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-white">Student Onboarding</h1>
-                    <p className="text-[#A1A1A1] mt-3 font-normal">First-time access for certificate owners</p>
+                    <h1 className="text-3xl font-semibold tracking-tight text-gray-900">Student Onboarding</h1>
+                    <p className="text-gray-600 mt-3 font-normal">First-time access for certificate owners</p>
                 </div>
 
                 <div className="mb-8">
                     <div className="flex items-center justify-between">
-                        <div className={`flex items-center ${step >= 1 ? 'text-white' : 'text-[#A1A1A1]'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 1 ? 'bg-white text-black border-white' : 'bg-[#111111] border-white/[0.08]'}`}>
+                        <div className={`flex items-center ${step >= 1 ? 'text-gray-900' : 'text-gray-400'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 1 ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-200'}`}>
                                 1
                             </div>
                             <span className="ml-3 text-sm font-medium">Email</span>
                         </div>
-                        <div className="flex-1 h-px bg-white/[0.08] mx-4"></div>
-                        <div className={`flex items-center ${step >= 2 ? 'text-white' : 'text-[#A1A1A1]'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 2 ? 'bg-white text-black border-white' : 'bg-[#111111] border-white/[0.08]'}`}>
+                        <div className="flex-1 h-px bg-gray-200 mx-4"></div>
+                        <div className={`flex items-center ${step >= 2 ? 'text-gray-900' : 'text-gray-400'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 2 ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-200'}`}>
                                 2
                             </div>
                             <span className="ml-3 text-sm font-medium">Verify</span>
                         </div>
-                        <div className="flex-1 h-px bg-white/[0.08] mx-4"></div>
-                        <div className={`flex items-center ${step >= 3 ? 'text-white' : 'text-[#A1A1A1]'}`}>
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 3 ? 'bg-white text-black border-white' : 'bg-[#111111] border-white/[0.08]'}`}>
+                        <div className="flex-1 h-px bg-gray-200 mx-4"></div>
+                        <div className={`flex items-center ${step >= 3 ? 'text-gray-900' : 'text-gray-400'}`}>
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border font-medium text-sm transition-colors ${step >= 3 ? 'bg-blue-600 text-white border-blue-600' : 'bg-gray-50 border-gray-200'}`}>
                                 3
                             </div>
                             <span className="ml-3 text-sm font-medium">Complete</span>
@@ -153,14 +153,14 @@ export default function StudentOnboardPage() {
                 {step === 1 && (
                     <form onSubmit={handleRequestOTP} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 University Email
                             </label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all placeholder:text-gray-400"
                                 placeholder="student@university.edu"
                                 required
                             />
@@ -169,7 +169,7 @@ export default function StudentOnboardPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                            className="w-full rounded-full bg-blue-600 px-6 py-3.5 text-white font-semibold transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_14px_0_rgb(13,110,253,0.39)]"
                         >
                             {loading ? 'Sending OTP...' : 'Send Verification Code'}
                         </button>
@@ -179,25 +179,25 @@ export default function StudentOnboardPage() {
                 {step === 2 && (
                     <form onSubmit={handleVerifyOTP} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2 text-center w-full">
+                            <label className="block text-sm font-medium text-gray-700 mb-2 text-center w-full">
                                 Enter 6-digit OTP
                             </label>
                             <input
                                 type="text"
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value)}
-                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all text-center text-3xl tracking-[0.5em] font-light"
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition-all text-center text-3xl tracking-[0.5em] font-light"
                                 placeholder="000000"
                                 maxLength="6"
                                 required
                             />
-                            <p className="text-xs text-zinc-500 mt-3 text-center">Check your email: <span className="text-zinc-300">{email}</span></p>
+                            <p className="text-xs text-gray-500 mt-3 text-center">Check your email: <span className="text-gray-900">{email}</span></p>
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                            className="w-full rounded-full bg-blue-600 px-6 py-3.5 text-white font-semibold transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_14px_0_rgb(13,110,253,0.39)]"
                         >
                             {loading ? 'Verifying...' : 'Verify OTP'}
                         </button>
@@ -205,7 +205,7 @@ export default function StudentOnboardPage() {
                         <button
                             type="button"
                             onClick={() => setStep(1)}
-                            className="w-full text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center justify-center"
+                            className="w-full text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center"
                         >
                             <ChevronLeft className="mr-1 w-4 h-4 stroke-[2]" /> Change email
                         </button>
@@ -216,54 +216,54 @@ export default function StudentOnboardPage() {
                     <form onSubmit={handleCompleteRegistration} className="space-y-5">
                         <div className="grid grid-cols-2 gap-4">
                             <div>
-                                <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
                                     First Name
                                 </label>
                                 <input
                                     type="text"
                                     value={firstName}
                                     onChange={(e) => setFirstName(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                                     required
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Last Name
                                 </label>
                                 <input
                                     type="text"
                                     value={lastName}
                                     onChange={(e) => setLastName(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                    className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                                     required
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Password
                             </label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                                 required
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Confirm Password
                             </label>
                             <input
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
-                                className="w-full px-4 py-2.5 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-2xl text-gray-900 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all placeholder:text-gray-400"
                                 required
                             />
                         </div>
@@ -271,20 +271,20 @@ export default function StudentOnboardPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)] mt-2"
+                            className="w-full rounded-full bg-gray-900 px-6 py-3.5 text-white font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-md mt-2"
                         >
                             {loading ? 'Creating account...' : 'Complete Registration'}
                         </button>
                     </form>
                 )}
 
-                <div className="mt-8 text-center space-y-4 pt-6 border-t border-white/[0.08]">
+                <div className="mt-8 text-center space-y-4 pt-6 border-t border-gray-100">
                     <div>
-                        <span className="text-sm text-[#A1A1A1]">Already registered? </span>
+                        <span className="text-sm text-gray-500">Already registered? </span>
                         <button
                             type="button"
                             onClick={() => navigate('/login?role=owner')}
-                            className="text-sm text-white hover:text-gray-300 font-medium transition-colors"
+                            className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
                         >
                             Login here
                         </button>
@@ -292,12 +292,12 @@ export default function StudentOnboardPage() {
                     <div>
                         <button
                             onClick={() => navigate('/')}
-                            className="text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center justify-center w-full"
+                            className="text-sm text-gray-500 hover:text-gray-900 transition-colors flex items-center justify-center w-full"
                         >
                             <ChevronLeft className="mr-1 w-4 h-4 stroke-[2]" /> Back to home
                         </button>
                     </div>
-                    <p className="text-xs text-zinc-600 pt-2">
+                    <p className="text-xs text-gray-400 pt-2">
                         Institutions: Contact admin for onboarding
                     </p>
                 </div>

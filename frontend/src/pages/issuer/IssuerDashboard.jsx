@@ -214,8 +214,8 @@ export default function IssuerDashboard() {
         years.push(y);
     }
 
-    const inputClass = "w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700";
-    const selectClass = "w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all appearance-none";
+    const inputClass = "w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400";
+    const selectClass = "w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all appearance-none";
 
     return (
         <DashboardLayout title="Issuer Dashboard">
@@ -224,8 +224,8 @@ export default function IssuerDashboard() {
                 {/* Header Section */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-3xl font-semibold tracking-tight text-white mb-2">Issuer Workspace</h1>
-                        <p className="text-[#A1A1A1] text-sm">Create, authorize, and issue blockchain-backed certificates.</p>
+                        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 mb-2">Issuer Workspace</h1>
+                        <p className="text-slate-500 text-sm">Create, authorize, and issue blockchain-backed certificates.</p>
                     </div>
                 </div>
 
@@ -247,24 +247,24 @@ export default function IssuerDashboard() {
                     {/* Left Column: Progress & Setup */}
                     <div className="lg:col-span-5 space-y-6">
 
-                        <div className="bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] relative overflow-hidden">
-                            <h2 className="text-lg font-semibold text-white mb-6">Security Workflow</h2>
+                        <div className="bg-white rounded-[28px] border-2 border-emerald-400 shadow-[0_8px_32px_rgb(16,185,129,0.15)] p-8 overflow-hidden">
+                            <h2 className="text-lg font-semibold text-slate-900 mb-6">Security Workflow</h2>
 
                             <div className="space-y-6">
                                 {/* Step 1: Connect */}
                                 <div className={`relative pl-8 ${isConnected ? 'opacity-50' : ''}`}>
-                                    <div className={`absolute left-0 top-1 bottom-[-24px] w-px ${isConnected ? 'bg-emerald-500/30' : 'bg-white/[0.08]'}`}></div>
-                                    <div className={`absolute left-[-3.5px] top-1.5 w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-white/[0.2]'}`}></div>
-                                    <div className="mb-2 font-medium text-sm text-white">1. Connect MetaMask</div>
+                                    <div className={`absolute left-0 top-1 bottom-[-24px] w-px ${isConnected ? 'bg-emerald-400/40' : 'bg-blue-100'}`}></div>
+                                    <div className={`absolute left-[-3.5px] top-1.5 w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-blue-200'}`}></div>
+                                    <div className="mb-2 font-medium text-sm text-slate-700">1. Connect MetaMask</div>
 
                                     {!isConnected ? (
-                                        <button onClick={handleConnectWallet} className="w-full mt-2 rounded-full bg-white px-6 py-2.5 text-black text-sm font-semibold transition-transform hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(255,255,255,0.1)]">
+                                        <button onClick={handleConnectWallet} className="w-full mt-2 rounded-full bg-blue-600 px-6 py-2.5 text-white text-sm font-semibold transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 shadow-[0_4px_14px_0_rgb(13,110,253,0.39)]">
                                             Connect Wallet
                                         </button>
                                     ) : (
-                                        <div className="text-xs text-[#A1A1A1] mt-1 break-all">
+                                        <div className="text-xs text-slate-500 mt-1 break-all">
                                             Connected: {walletAddress}
-                                            <button onClick={handleDisconnect} className="ml-2 text-red-400 hover:text-red-300">Disconnect</button>
+                                            <button onClick={handleDisconnect} className="ml-2 text-red-500 hover:text-red-400">Disconnect</button>
                                         </div>
                                     )}
                                 </div>
@@ -295,8 +295,8 @@ export default function IssuerDashboard() {
 
                                 {/* Step 3: Authorize */}
                                 <div className={`relative pl-8 ${signingToken ? 'opacity-50' : !walletVerified ? 'opacity-30 pointer-events-none' : ''}`}>
-                                    <div className={`absolute left-[-3.5px] top-1.5 w-2 h-2 rounded-full ${signingToken ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-white/[0.2]'}`}></div>
-                                    <div className="mb-2 font-medium text-sm text-white">3. Authorize Session</div>
+                                    <div className={`absolute left-[-3.5px] top-1.5 w-2 h-2 rounded-full ${signingToken ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]' : 'bg-blue-200'}`}></div>
+                                    <div className="mb-2 font-medium text-sm text-slate-700">3. Authorize Session</div>
 
                                     {walletVerified && !signingToken && (
                                         <button onClick={handleAuthorize} className="w-full mt-2 bg-gradient-to-r from-purple-500/20 to-indigo-500/20 border border-purple-500/30 rounded-full px-6 py-2.5 text-purple-300 text-sm font-semibold transition-transform hover:scale-105 active:scale-95 shadow-[0_0_15px_rgba(168,85,247,0.15)]">
@@ -313,12 +313,11 @@ export default function IssuerDashboard() {
 
                     {/* Right Column: Issue Form */}
                     <div className="lg:col-span-7">
-                        <div className={`bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] h-full transition-all duration-300 ${!signingToken ? 'opacity-40 pointer-events-none grayscale-[0.5]' : ''}`}>
-
+                        <div className={`bg-white rounded-[28px] border-2 border-emerald-400 shadow-[0_8px_32px_rgb(16,185,129,0.15)] p-8 h-full transition-all duration-300 overflow-hidden ${!signingToken ? 'opacity-40 pointer-events-none grayscale-[0.5]' : ''}`}>
                             <div className="flex items-center justify-between mb-8">
-                                <h2 className="text-xl font-semibold text-white">Issue Certificate</h2>
+                                <h2 className="text-xl font-semibold text-slate-900">Issue Certificate</h2>
                                 {!signingToken && (
-                                    <span className="text-xs bg-white/[0.08] border border-white/[0.1] px-3 py-1 rounded-full text-[#A1A1A1]">
+                                    <span className="text-xs bg-blue-50 border border-blue-100 px-3 py-1 rounded-full text-blue-600">
                                         Requires Authorization
                                     </span>
                                 )}
@@ -397,15 +396,15 @@ export default function IssuerDashboard() {
                                 </div>
 
                                 {issueStep && (
-                                    <div className="bg-white/[0.04] border border-white/[0.08] rounded-2xl p-4 text-sm text-[#A1A1A1] flex items-center space-x-3">
-                                        <div className="h-4 w-4 rounded-full border-2 border-white/20 border-t-white animate-spin"></div>
+                                    <div className="bg-[#eff6ff] border border-blue-100 rounded-2xl p-4 text-sm text-slate-600 flex items-center space-x-3">
+                                        <div className="h-4 w-4 rounded-full border-2 border-blue-200 border-t-blue-600 animate-spin"></div>
                                         <span className="font-mono text-xs">{issueStep}</span>
                                     </div>
                                 )}
 
-                                <div className="pt-4 border-t border-white/[0.08]">
+                                <div className="pt-4 border-t border-blue-50">
                                     <button type="submit" disabled={loading}
-                                        className="w-full rounded-full bg-white px-6 py-4 text-black font-semibold transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_20px_rgba(255,255,255,0.15)] flex justify-center items-center">
+                                        className="w-full rounded-full bg-blue-600 px-6 py-4 text-white font-semibold transition-all hover:scale-[1.02] hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_20px_rgb(13,110,253,0.39)] flex justify-center items-center">
                                         {loading ? 'Processing Transaction...' : 'Mint onto Blockchain'}
                                     </button>
                                 </div>
@@ -415,59 +414,59 @@ export default function IssuerDashboard() {
                 </div>
 
                 {/* Issued Certificates Ledger */}
-                <div className="bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] p-8 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]">
-                    <div className="flex items-center justify-between mb-6 pb-6 border-b border-white/[0.08]">
+                <div className="bg-white rounded-[28px] border-2 border-emerald-400 shadow-[0_8px_32px_rgb(16,185,129,0.15)] p-8 overflow-hidden">
+                    <div className="flex items-center justify-between mb-6 pb-6 border-b border-emerald-100">
                         <div>
-                            <h2 className="text-xl font-semibold text-white">Issued Ledger</h2>
-                            <p className="text-[#A1A1A1] text-sm mt-1">Historically verifiable records on Base Sepolia</p>
+                            <h2 className="text-xl font-semibold text-slate-900">Issued Ledger</h2>
+                            <p className="text-slate-500 text-sm mt-1">Historically verifiable records on Base Sepolia</p>
                         </div>
-                        <button onClick={loadIssuedCertificates} className="text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center gap-1.5 focus:outline-none">
+                        <button onClick={loadIssuedCertificates} className="text-sm text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-1.5 focus:outline-none">
                             <RefreshCw className="mr-1 w-4 h-4" /> Refresh Ledger
                         </button>
                     </div>
 
                     {certsLoading ? (
-                        <div className="text-center py-12 text-[#A1A1A1]">
+                        <div className="text-center py-12 text-slate-500">
                             <div className="animate-pulse flex flex-col items-center">
-                                <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin mb-4"></div>
+                                <div className="h-8 w-8 rounded-full border-2 border-blue-100 border-t-blue-600 animate-spin mb-4"></div>
                                 <p>Loading ledger...</p>
                             </div>
                         </div>
                     ) : issuedCerts.length === 0 ? (
-                        <div className="text-center py-16 text-[#A1A1A1]">
-                            <div className="mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                                <FileText className="w-6 h-6 text-white stroke-[1.5]" />
+                        <div className="text-center py-16 text-slate-500">
+                            <div className="mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full bg-[#eff6ff] border border-blue-100">
+                                <FileText className="w-6 h-6 text-blue-600 stroke-[1.5]" />
                             </div>
-                            <p className="text-white font-medium mb-1">No certificates issued</p>
+                            <p className="text-slate-700 font-medium mb-1">No certificates issued</p>
                             <p className="text-sm">Use the form above to mint your first credential.</p>
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left border-collapse min-w-[900px]">
                                 <thead>
-                                    <tr className="border-b border-white/[0.08] bg-[#111111]/30">
-                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Recipient</th>
-                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Course</th>
-                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Dept</th>
-                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Certificate Hash</th>
-                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">TX Hash</th>
-                                        <th className="px-6 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Issued On</th>
+                                    <tr className="border-b border-blue-50 bg-[#eff6ff]/40">
+                                        <th className="px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Recipient</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Course</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Dept</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Certificate Hash</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">TX Hash</th>
+                                        <th className="px-6 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Issued On</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-white/[0.04]">
+                                <tbody className="divide-y divide-blue-50">
                                     {issuedCerts.map((cert) => (
-                                        <tr key={cert.id} className="hover:bg-white/[0.02] transition-colors group">
+                                        <tr key={cert.id} className="hover:bg-[#eff6ff]/30 transition-colors group">
                                             <td className="px-6 py-5 whitespace-nowrap">
-                                                <div className="font-medium text-white">{cert.recipientName}</div>
-                                                <div className="text-xs text-[#A1A1A1] mt-1">{cert.recipientEmail || '—'}</div>
+                                                <div className="font-medium text-slate-900">{cert.recipientName}</div>
+                                                <div className="text-xs text-slate-500 mt-1">{cert.recipientEmail || '—'}</div>
                                             </td>
-                                            <td className="px-6 py-5 whitespace-nowrap text-sm text-[#A1A1A1]">{cert.courseName}</td>
-                                            <td className="px-6 py-5 whitespace-nowrap text-sm text-[#A1A1A1]">{cert.additionalInfo?.department || '—'}</td>
+                                            <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{cert.courseName}</td>
+                                            <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">{cert.additionalInfo?.department || '—'}</td>
                                             <td className="px-6 py-5 whitespace-nowrap font-mono text-xs">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-[#A1A1A1]">{truncateHash(cert.hash)}</span>
+                                                    <span className="text-slate-500">{truncateHash(cert.hash)}</span>
                                                     <button onClick={() => copyToClipboard(cert.hash, `hash-${cert.id}`)}
-                                                        className="text-[#A1A1A1] hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy full hash">
+                                                        className="text-slate-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy full hash">
                                                         {copiedId === `hash-${cert.id}` ? <Check className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                                                     </button>
                                                 </div>
@@ -477,17 +476,17 @@ export default function IssuerDashboard() {
                                                     <div className="flex items-center gap-2">
                                                         <a href={`https://sepolia.basescan.org/tx/${cert.txHash}`}
                                                             target="_blank" rel="noopener noreferrer"
-                                                            className="text-purple-400 hover:text-purple-300 transition-colors" title={cert.txHash}>
+                                                            className="text-blue-600 hover:text-blue-500 transition-colors" title={cert.txHash}>
                                                             {truncateHash(cert.txHash)}
                                                         </a>
                                                         <button onClick={() => copyToClipboard(cert.txHash, `tx-${cert.id}`)}
-                                                            className="text-[#A1A1A1] hover:text-white transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy TX hash">
+                                                            className="text-slate-400 hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100" title="Copy TX hash">
                                                             {copiedId === `tx-${cert.id}` ? <Check className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />}
                                                         </button>
                                                     </div>
-                                                ) : <span className="text-[#A1A1A1]">Pending...</span>}
+                                                ) : <span className="text-slate-400">Pending...</span>}
                                             </td>
-                                            <td className="px-6 py-5 whitespace-nowrap text-sm text-[#A1A1A1]">
+                                            <td className="px-6 py-5 whitespace-nowrap text-sm text-slate-500">
                                                 {cert.createdAt ? new Date(cert.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                                             </td>
                                         </tr>

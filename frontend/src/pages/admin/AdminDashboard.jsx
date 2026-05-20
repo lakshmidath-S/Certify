@@ -152,21 +152,21 @@ export default function AdminDashboard() {
 
             {/* ===== TEMP PASSWORD MODAL ===== */}
             {createdIssuer && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-                    <div className="bg-[#111111] border border-white/[0.12] rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl shadow-black/50 animate-fade-in-up">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
+                    <div className="bg-white border border-blue-100 rounded-3xl p-8 max-w-md w-full mx-4 shadow-[0_20px_60px_rgb(13,110,253,0.12)] animate-fade-in-up">
                         <div className="flex items-center justify-between mb-6">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-                                    <KeyRound className="w-5 h-5 text-emerald-400" />
+                                <div className="w-10 h-10 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                                    <KeyRound className="w-5 h-5 text-emerald-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-white font-semibold text-lg">Issuer Created!</h3>
-                                    <p className="text-[#A1A1A1] text-xs">Save this password — it won't be shown again</p>
+                                    <h3 className="text-slate-900 font-semibold text-lg">Issuer Created!</h3>
+                                    <p className="text-slate-500 text-xs">Save this password — it won't be shown again</p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setCreatedIssuer(null)}
-                                className="text-[#A1A1A1] hover:text-white transition-colors p-1"
+                                className="text-slate-400 hover:text-slate-700 transition-colors p-1"
                             >
                                 <X className="w-5 h-5" />
                             </button>
@@ -174,38 +174,38 @@ export default function AdminDashboard() {
 
                         <div className="space-y-4 mb-6">
                             <div>
-                                <p className="text-xs text-[#A1A1A1] uppercase tracking-wider mb-1">Institution</p>
-                                <p className="text-white font-medium">{createdIssuer.institutionName}</p>
+                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Institution</p>
+                                <p className="text-slate-900 font-medium">{createdIssuer.institutionName}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-[#A1A1A1] uppercase tracking-wider mb-1">Login Email</p>
-                                <p className="text-white font-mono text-sm">{createdIssuer.email}</p>
+                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Login Email</p>
+                                <p className="text-slate-900 font-mono text-sm">{createdIssuer.email}</p>
                             </div>
                             <div>
-                                <p className="text-xs text-[#A1A1A1] uppercase tracking-wider mb-2">Temporary Password</p>
-                                <div className="flex items-center gap-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl px-4 py-3">
-                                    <span className="flex-1 text-white font-mono text-sm tracking-widest select-all">{createdIssuer.tempPassword}</span>
+                                <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">Temporary Password</p>
+                                <div className="flex items-center gap-3 bg-[#eff6ff] border border-blue-100 rounded-2xl px-4 py-3">
+                                    <span className="flex-1 text-slate-900 font-mono text-sm tracking-widest select-all">{createdIssuer.tempPassword}</span>
                                     <button
                                         onClick={handleCopyPassword}
-                                        className="text-[#A1A1A1] hover:text-white transition-colors flex-shrink-0"
+                                        className="text-slate-400 hover:text-blue-600 transition-colors flex-shrink-0"
                                         title="Copy password"
                                     >
                                         {copied
-                                            ? <CheckCircle className="w-4 h-4 text-emerald-400" />
+                                            ? <CheckCircle className="w-4 h-4 text-emerald-500" />
                                             : <Copy className="w-4 h-4" />}
                                     </button>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-2xl px-4 py-3 text-yellow-400 text-xs mb-6 flex items-start gap-2">
+                        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl px-4 py-3 text-yellow-700 text-xs mb-6 flex items-start gap-2">
                             <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                             <span>Share this password securely with the institution. It cannot be recovered after closing this dialog.</span>
                         </div>
 
                         <button
                             onClick={() => setCreatedIssuer(null)}
-                            className="w-full rounded-full bg-white text-black font-semibold py-3 hover:bg-white/90 transition-all"
+                            className="w-full rounded-full bg-blue-600 text-white font-semibold py-3 hover:bg-blue-700 transition-all shadow-[0_4px_14px_0_rgb(13,110,253,0.39)]"
                         >
                             I've saved the password
                         </button>
@@ -216,8 +216,8 @@ export default function AdminDashboard() {
 
                 <div className="flex items-center justify-between mb-8">
                     <div>
-                        <h1 className="text-3xl font-semibold tracking-tight text-white mb-2">Admin Dashboard</h1>
-                        <p className="text-[#A1A1A1] text-sm">Manage institutions, wallets, and platform security.</p>
+                        <h1 className="text-3xl font-semibold tracking-tight text-slate-900 mb-2">Admin Dashboard</h1>
+                        <p className="text-slate-500 text-sm">Manage institutions, wallets, and platform security.</p>
                     </div>
                 </div>
 
@@ -234,19 +234,19 @@ export default function AdminDashboard() {
                 )}
 
                 {/* Tabs Container */}
-                <div className="bg-[#111111]/80 backdrop-blur-md border border-white/[0.08] p-1.5 rounded-full flex overflow-x-auto shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] scrollbar-hide">
+                <div className="bg-white border border-violet-100 p-1.5 rounded-full flex overflow-x-auto shadow-[0_2px_10px_rgb(124,58,237,0.08)] scrollbar-hide">
                     {tabs.map(tab => (
                         <button
                             key={tab.id}
                             onClick={() => { setActiveTab(tab.id); setMessage(''); setError(''); }}
                             className={`flex-1 min-w-max py-2.5 px-6 rounded-full text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2 ${activeTab === tab.id
-                                ? 'bg-white text-black shadow-lg shadow-black/20'
-                                : 'text-[#A1A1A1] hover:text-white hover:bg-white/[0.04]'
+                                ? 'bg-violet-600 text-white shadow-[0_4px_14px_0_rgb(124,58,237,0.39)]'
+                                : 'text-slate-500 hover:text-violet-600 hover:bg-violet-50'
                                 }`}
                         >
                             {tab.label}
                             {tab.count !== undefined && (
-                                <span className={`flex h-5 items-center px-1.5 rounded-full text-[10px] font-bold ${activeTab === tab.id ? 'bg-[#111111] text-white' : 'bg-white/[0.08] text-[#A1A1A1]'}`}>
+                                <span className={`flex h-5 items-center px-1.5 rounded-full text-[10px] font-bold ${activeTab === tab.id ? 'bg-white text-violet-600' : 'bg-violet-50 text-violet-500'}`}>
                                     {tab.count}
                                 </span>
                             )}
@@ -255,60 +255,60 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* Main Content Area */}
-                <div className="bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] overflow-hidden">
+                <div className="relative bg-white rounded-[28px] border-2 border-violet-400 shadow-[0_8px_32px_rgb(124,58,237,0.15)] overflow-hidden">
 
                     {/* TAB: Issuers List */}
                     {activeTab === 'issuers' && (
                         <div>
-                            <div className="px-8 py-6 border-b border-white/[0.08] flex items-center justify-between">
+                            <div className="px-8 py-6 border-b border-blue-50 flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-xl font-semibold text-white">Registered Issuers</h2>
-                                    <p className="text-sm text-[#A1A1A1] mt-1">All universities and institutions</p>
+                                    <h2 className="text-xl font-semibold text-slate-900">Registered Issuers</h2>
+                                    <p className="text-sm text-slate-500 mt-1">All universities and institutions</p>
                                 </div>
-                                <button onClick={fetchIssuers} className="text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center gap-1.5">
+                                <button onClick={fetchIssuers} className="text-sm text-slate-500 hover:text-blue-600 transition-colors flex items-center gap-1.5">
                                     <RefreshCw className="w-4 h-4" /> Refresh
                                 </button>
                             </div>
 
                             {issuersLoading ? (
-                                <div className="px-6 py-16 text-center text-[#A1A1A1]">
+                                <div className="px-6 py-16 text-center text-slate-500">
                                     <div className="animate-pulse flex flex-col items-center">
-                                        <div className="h-8 w-8 rounded-full border-2 border-white/20 border-t-white animate-spin mb-4"></div>
+                                        <div className="h-8 w-8 rounded-full border-2 border-blue-100 border-t-blue-600 animate-spin mb-4"></div>
                                         <p>Loading issuers...</p>
                                     </div>
                                 </div>
                             ) : issuers.length === 0 ? (
-                                <div className="px-6 py-16 text-center text-[#A1A1A1]">
-                                    <div className="mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                                        <BadgeCheck className="w-6 h-6 text-white stroke-[1.5]" />
+                                <div className="px-6 py-16 text-center text-slate-500">
+                                    <div className="mx-auto mb-4 w-12 h-12 flex items-center justify-center rounded-full bg-[#eff6ff] border border-blue-100">
+                                        <BadgeCheck className="w-6 h-6 text-blue-600 stroke-[1.5]" />
                                     </div>
-                                    <p className="text-white font-medium mb-1">No issuers yet</p>
+                                    <p className="text-slate-700 font-medium mb-1">No issuers yet</p>
                                     <p className="text-sm">Click "Add Issuer" to register a university</p>
                                 </div>
                             ) : (
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left border-collapse min-w-[800px]">
                                         <thead>
-                                            <tr className="border-b border-white/[0.08] bg-[#111111]/30">
-                                                <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Institution</th>
-                                                <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Email</th>
-                                                <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Wallet</th>
-                                                <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Status</th>
-                                                <th className="px-8 py-4 text-xs font-medium text-[#A1A1A1] uppercase tracking-wider">Created</th>
+                                            <tr className="border-b border-blue-50 bg-[#eff6ff]/40">
+                                                <th className="px-8 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Institution</th>
+                                                <th className="px-8 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
+                                                <th className="px-8 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Wallet</th>
+                                                <th className="px-8 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                                                <th className="px-8 py-4 text-xs font-medium text-slate-500 uppercase tracking-wider">Created</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-white/[0.04]">
+                                        <tbody className="divide-y divide-blue-50">
                                             {issuers.map((issuer) => (
-                                                <tr key={issuer.id} className="hover:bg-white/[0.02] transition-colors">
+                                                <tr key={issuer.id} className="hover:bg-[#eff6ff]/30 transition-colors">
                                                     <td className="px-8 py-5 whitespace-nowrap">
-                                                        <div className="text-sm font-medium text-white flex items-center gap-3">
-                                                            <div className="w-8 h-8 rounded-full bg-[#1A1A1A] border border-white/[0.08] flex items-center justify-center text-xs text-[#A1A1A1]">
+                                                        <div className="text-sm font-medium text-slate-900 flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-full bg-[#eff6ff] border border-blue-100 flex items-center justify-center text-xs text-blue-600 font-bold">
                                                                 {(issuer.institution_name || issuer.email).charAt(0).toUpperCase()}
                                                             </div>
                                                             {issuer.institution_name || issuer.email}
                                                         </div>
                                                     </td>
-                                                    <td className="px-8 py-5 whitespace-nowrap text-sm text-[#A1A1A1]">
+                                                    <td className="px-8 py-5 whitespace-nowrap text-sm text-slate-500">
                                                         {issuer.email}
                                                     </td>
                                                     <td className="px-8 py-5 whitespace-nowrap">
@@ -344,7 +344,7 @@ export default function AdminDashboard() {
                                                             </span>
                                                         )}
                                                     </td>
-                                                    <td className="px-8 py-5 whitespace-nowrap text-sm text-[#A1A1A1]">
+                                                    <td className="px-8 py-5 whitespace-nowrap text-sm text-slate-500">
                                                         {issuer.created_at ? new Date(issuer.created_at).toLocaleDateString() : '-'}
                                                     </td>
                                                 </tr>
@@ -359,29 +359,29 @@ export default function AdminDashboard() {
                     {/* TAB: Create Issuer */}
                     {activeTab === 'create' && (
                         <div className="p-8 max-w-3xl">
-                            <h2 className="text-2xl font-semibold mb-2 text-white">Add New Issuer</h2>
-                            <p className="text-sm text-[#A1A1A1] mb-8">Register a university or educational institution to issue certificates.</p>
+                            <h2 className="text-2xl font-semibold mb-2 text-slate-900">Add New Issuer</h2>
+                            <p className="text-sm text-slate-500 mb-8">Register a university or educational institution to issue certificates.</p>
 
                             <form onSubmit={handleCreateIssuer} className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Institution Name *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Institution Name *</label>
                                     <input
                                         type="text"
                                         value={institutionName}
                                         onChange={(e) => setInstitutionName(e.target.value)}
-                                        className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700"
+                                        className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                         placeholder="e.g. Harvard University"
                                         required
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Official Email *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Official Email *</label>
                                     <input
                                         type="email"
                                         value={officialEmail}
                                         onChange={(e) => setOfficialEmail(e.target.value)}
-                                        className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700"
+                                        className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                         placeholder="admin@university.edu"
                                         required
                                     />
@@ -389,43 +389,43 @@ export default function AdminDashboard() {
 
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Contact Person</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">Contact Person</label>
                                         <input
                                             type="text"
                                             value={contactPerson}
                                             onChange={(e) => setContactPerson(e.target.value)}
-                                            className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700"
+                                            className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                             placeholder="John Doe"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Contact Phone</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">Contact Phone</label>
                                         <input
                                             type="tel"
                                             value={contactPhone}
                                             onChange={(e) => setContactPhone(e.target.value)}
-                                            className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700"
+                                            className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                             placeholder="+1234567890"
                                         />
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Website</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Website</label>
                                     <input
                                         type="url"
                                         value={website}
                                         onChange={(e) => setWebsite(e.target.value)}
-                                        className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700"
+                                        className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                         placeholder="https://university.edu"
                                     />
                                 </div>
 
-                                <div className="pt-4 border-t border-white/[0.08]">
+                                <div className="pt-4 border-t border-blue-50">
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="rounded-full bg-white px-8 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                                        className="rounded-full bg-blue-600 px-8 py-3.5 text-white font-semibold transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_14px_0_rgb(13,110,253,0.39)]"
                                     >
                                         {loading ? 'Creating Account...' : 'Create Issuer Account'}
                                     </button>
@@ -437,15 +437,15 @@ export default function AdminDashboard() {
                     {/* TAB: Map Wallet */}
                     {activeTab === 'wallets' && (
                         <div className="p-8 max-w-3xl">
-                            <h2 className="text-2xl font-semibold mb-2 text-white">Map Issuer Wallet</h2>
-                            <p className="text-sm text-[#A1A1A1] mb-8">
+                            <h2 className="text-2xl font-semibold mb-2 text-slate-900">Map Issuer Wallet</h2>
+                            <p className="text-sm text-slate-500 mb-8">
                                 Link an issuer's account to their blockchain wallet address to enable certificate issuance.
                             </p>
 
                             {issuersWithoutWallet.length === 0 && !issuersLoading ? (
-                                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-6 py-12 rounded-2xl text-center">
-                                    <div className="mx-auto mb-6 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                                        <CheckCircle className="w-6 h-6 text-emerald-400 stroke-[1.5]" />
+                                <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 px-6 py-12 rounded-2xl text-center">
+                                    <div className="mx-auto mb-6 w-12 h-12 flex items-center justify-center rounded-full bg-emerald-100 border border-emerald-200">
+                                        <CheckCircle className="w-6 h-6 text-emerald-600 stroke-[1.5]" />
                                     </div>
                                     <div className="font-semibold text-lg mb-1">All Caught Up!</div>
                                     <div className="text-sm opacity-80">All registered issuers currently have a wallet mapped.</div>
@@ -453,45 +453,45 @@ export default function AdminDashboard() {
                             ) : (
                                 <form onSubmit={handleMapWallet} className="space-y-6">
                                     <div>
-                                        <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Select Issuer *</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">Select Issuer *</label>
                                         <div className="relative">
                                             <select
                                                 value={selectedIssuerId}
                                                 onChange={(e) => setSelectedIssuerId(e.target.value)}
-                                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all appearance-none cursor-pointer"
+                                                className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 transition-all appearance-none cursor-pointer"
                                                 required
                                             >
-                                                <option value="" disabled className="text-zinc-600">-- Choose an issuer --</option>
+                                                <option value="" disabled className="text-slate-400">-- Choose an issuer --</option>
                                                 {issuersWithoutWallet.map(issuer => (
                                                     <option key={issuer.id} value={issuer.id}>
                                                         {issuer.institution_name || issuer.email}
                                                     </option>
                                                 ))}
                                             </select>
-                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#A1A1A1]">
+                                            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
                                                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div>
-                                        <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Wallet Address *</label>
+                                        <label className="block text-sm font-medium text-slate-700 mb-2">Wallet Address *</label>
                                         <input
                                             type="text"
                                             value={walletAddress}
                                             onChange={(e) => setWalletAddress(e.target.value)}
-                                            className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-700 font-mono text-sm"
+                                            className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400 font-mono text-sm"
                                             placeholder="0x..."
                                             required
                                         />
-                                        <p className="text-xs text-zinc-500 mt-2">The issuer's MetaMask wallet address on Base Sepolia.</p>
+                                        <p className="text-xs text-slate-400 mt-2">The issuer's MetaMask wallet address on Base Sepolia.</p>
                                     </div>
 
-                                    <div className="pt-4 border-t border-white/[0.08]">
+                                    <div className="pt-4 border-t border-blue-50">
                                         <button
                                             type="submit"
                                             disabled={loading}
-                                            className="rounded-full bg-white px-8 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                                            className="rounded-full bg-blue-600 px-8 py-3.5 text-white font-semibold transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_14px_0_rgb(13,110,253,0.39)]"
                                         >
                                             {loading ? 'Mapping on blockchain...' : 'Map Wallet on Chain'}
                                         </button>
@@ -504,51 +504,51 @@ export default function AdminDashboard() {
                     {/* TAB: Revoke Wallet */}
                     {activeTab === 'revoke' && (
                         <div className="p-8 max-w-3xl">
-                            <h2 className="text-2xl font-semibold mb-2 text-white">Revoke Issuer Wallet</h2>
-                            <p className="text-sm text-[#A1A1A1] mb-8">
+                            <h2 className="text-2xl font-semibold mb-2 text-slate-900">Revoke Issuer Wallet</h2>
+                            <p className="text-sm text-slate-500 mb-8">
                                 Revoke an issuer's wallet to permanently block them from issuing new certificates.
                             </p>
 
                             <form onSubmit={handleRevokeWallet} className="space-y-6">
                                 <div>
-                                    <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Select Mapped Wallet *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Select Mapped Wallet *</label>
                                     <div className="relative">
                                         <select
                                             value={revokeAddress}
                                             onChange={(e) => setRevokeAddress(e.target.value)}
-                                            className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all appearance-none cursor-pointer"
+                                            className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-red-400 transition-all appearance-none cursor-pointer"
                                             required
                                         >
-                                            <option value="" disabled className="text-zinc-600">-- Select a wallet to revoke --</option>
+                                            <option value="" disabled className="text-slate-400">-- Select a wallet to revoke --</option>
                                             {issuers.filter(i => i.wallet_address).map(issuer => (
                                                 <option key={issuer.id} value={issuer.wallet_address}>
                                                     {issuer.institution_name || issuer.email} — {issuer.wallet_address.substring(0, 10)}...
                                                 </option>
                                             ))}
                                         </select>
-                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#A1A1A1]">
+                                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
                                             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Reason for Revocation *</label>
+                                    <label className="block text-sm font-medium text-slate-700 mb-2">Reason for Revocation *</label>
                                     <textarea
                                         value={revokeReason}
                                         onChange={(e) => setRevokeReason(e.target.value)}
-                                        className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-red-500/50 transition-all placeholder:text-zinc-700 resize-none"
+                                        className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-red-400 focus:bg-white transition-all placeholder:text-slate-400 resize-none"
                                         rows="4"
                                         placeholder="Explain why this wallet is being revoked. This will be recorded on-chain."
                                         required
                                     />
                                 </div>
 
-                                <div className="pt-4 border-t border-white/[0.08]">
+                                <div className="pt-4 border-t border-blue-50">
                                     <button
                                         type="submit"
                                         disabled={loading}
-                                        className="rounded-full bg-red-600 border border-red-500 hover:bg-red-500 px-8 py-3.5 text-white font-semibold transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(220,38,38,0.2)]"
+                                        className="rounded-full bg-red-600 hover:bg-red-500 px-8 py-3.5 text-white font-semibold transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_14px_0_rgb(220,38,38,0.3)]"
                                     >
                                         {loading ? 'Processing Revocation...' : <span className="flex items-center justify-center"><AlertTriangle className="w-4 h-4 mr-2" /> Revoke Wallet Access</span>}
                                     </button>

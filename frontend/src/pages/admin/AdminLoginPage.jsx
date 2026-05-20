@@ -63,19 +63,18 @@ export default function AdminLoginPage() {
     };
 
     return (
-        <div className="min-h-screen text-white font-sans flex items-center justify-center px-4 overflow-hidden selection:bg-white/30">
-            {/* Background elements handled via index.css globally */}
+        <div className="min-h-screen text-slate-800 font-sans flex items-center justify-center px-4 overflow-hidden selection:bg-blue-600/30">
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[40%] h-[40%] bg-white/[0.02] rounded-full blur-[100px]"></div>
+                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
             </div>
 
-            <div className="relative z-10 max-w-md w-full bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-md p-10 animate-fade-in-up">
+            <div className="relative z-10 max-w-md w-full bg-white rounded-[28px] border-2 border-violet-400 shadow-[0_8px_32px_rgb(124,58,237,0.18)] p-10 animate-fade-in-up">
                 <div className="text-center mb-8 flex flex-col items-center">
-                    <div className="mb-6 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                        <ShieldCheck className="w-6 h-6 text-white stroke-[1.5]" />
+                    <div className="mb-6 w-12 h-12 flex items-center justify-center rounded-2xl bg-violet-50 border border-violet-200 shadow-sm text-violet-600">
+                        <ShieldCheck className="w-6 h-6 stroke-[1.5]" />
                     </div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-white">Admin Login</h1>
-                    <p className="text-[#A1A1A1] mt-3 font-normal">
+                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900">Admin Login</h1>
+                    <p className="text-slate-500 mt-3 font-normal">
                         {!isConnected
                             ? 'Step 1: Connect your admin wallet'
                             : !walletVerified
@@ -85,7 +84,7 @@ export default function AdminLoginPage() {
                 </div>
 
                 {error && (
-                    <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-2xl text-sm mb-6">
+                    <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-2xl text-sm mb-6">
                         {error}
                     </div>
                 )}
@@ -95,7 +94,7 @@ export default function AdminLoginPage() {
                     <button
                         onClick={handleConnectWallet}
                         disabled={loading}
-                        className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                        className="w-full rounded-full bg-blue-600 px-6 py-3.5 text-white font-semibold transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_14px_0_rgb(13,110,253,0.39)]"
                     >
                         {loading ? 'Connecting...' : 'Connect MetaMask'}
                     </button>
@@ -103,7 +102,7 @@ export default function AdminLoginPage() {
 
                 {/* Wallet connected but NOT verified */}
                 {isConnected && !walletVerified && !error && (
-                    <div className="text-center text-[#A1A1A1]">
+                    <div className="text-center text-slate-500">
                         <p className="animate-pulse">Verifying wallet signature...</p>
                     </div>
                 )}
@@ -111,9 +110,9 @@ export default function AdminLoginPage() {
                 {/* Wallet connected but FAILED verification */}
                 {isConnected && !walletVerified && error && (
                     <div className="space-y-6">
-                        <div className="bg-red-500/5 border border-red-500/10 p-4 rounded-2xl text-center">
-                            <p className="text-xs text-[#A1A1A1] mb-1">Connected Wallet:</p>
-                            <p className="font-mono text-sm text-red-300 break-all">{walletAddress}</p>
+                        <div className="bg-red-50 border border-red-200 p-4 rounded-2xl text-center">
+                            <p className="text-xs text-slate-500 mb-1">Connected Wallet:</p>
+                            <p className="font-mono text-sm text-red-500 break-all">{walletAddress}</p>
                         </div>
                         <button
                             onClick={() => {
@@ -121,7 +120,7 @@ export default function AdminLoginPage() {
                                 setWalletAddress('');
                                 setError('');
                             }}
-                            className="w-full rounded-full bg-[#111111] border border-white/[0.08] px-6 py-3.5 text-white font-semibold transition-transform hover:bg-[#1A1A1A] hover:scale-105 active:scale-95 shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]"
+                            className="w-full rounded-full bg-slate-100 border border-slate-200 px-6 py-3.5 text-slate-700 font-semibold transition-transform hover:bg-slate-200 hover:scale-105 active:scale-95"
                         >
                             Try Different Wallet
                         </button>
@@ -131,38 +130,38 @@ export default function AdminLoginPage() {
                 {/* Step 2: Email/Password form (only shown after wallet is verified) */}
                 {walletVerified && (
                     <div className="space-y-6">
-                        <div className="bg-emerald-500/5 border border-emerald-500/10 p-4 rounded-2xl text-center">
-                            <p className="text-sm text-emerald-400 font-medium tracking-tight">Wallet verified securely</p>
-                            <p className="font-mono text-xs text-[#A1A1A1] break-all mt-2">{walletAddress}</p>
+                        <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-center">
+                            <p className="text-sm text-emerald-600 font-medium tracking-tight">Wallet verified securely</p>
+                            <p className="font-mono text-xs text-slate-500 break-all mt-2">{walletAddress}</p>
                         </div>
 
                         <form onSubmit={handleLogin} className="space-y-5">
                             <div>
-                                <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Email</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
                                 <input
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                    className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                     placeholder="admin@certify.com"
                                 />
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-[#A1A1A1] mb-2">Password</label>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">Password</label>
                                 <input
                                     type="password"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                    className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                     placeholder="••••••••"
                                 />
                             </div>
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)] mt-2"
+                                className="w-full rounded-full bg-blue-600 px-6 py-3.5 text-white font-semibold transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_14px_0_rgb(13,110,253,0.39)] mt-2"
                             >
                                 {loading ? 'Logging in...' : 'Login as Admin'}
                             </button>
@@ -170,10 +169,10 @@ export default function AdminLoginPage() {
                     </div>
                 )}
 
-                <div className="mt-8 text-center space-y-4 pt-6 border-t border-white/[0.08]">
+                <div className="mt-8 text-center space-y-4 pt-6 border-t border-blue-50">
                     <button
                         onClick={() => navigate('/')}
-                        className="text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center justify-center w-full"
+                        className="text-sm text-slate-500 hover:text-slate-900 transition-colors flex items-center justify-center w-full"
                     >
                         <ChevronLeft className="mr-1 w-4 h-4 stroke-[2]" /> Back to role selection
                     </button>

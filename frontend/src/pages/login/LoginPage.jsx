@@ -49,21 +49,31 @@ export default function LoginPage() {
     };
 
     return (
-        <div className="min-h-screen text-white font-sans flex items-center justify-center px-4 overflow-hidden selection:bg-white/30">
+        <div className="min-h-screen text-slate-800 font-sans flex items-center justify-center px-4 overflow-hidden selection:bg-blue-600/30">
             {/* Background elements handling via index.css globally */}
             <div className="absolute inset-0 pointer-events-none">
-                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[40%] h-[40%] bg-white/[0.02] rounded-full blur-[100px]"></div>
+                <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[40%] h-[40%] bg-blue-600/10 rounded-full blur-[120px]"></div>
             </div>
 
-            <div className="relative z-10 w-full max-w-md bg-gradient-to-b from-card-top to-card-bottom rounded-[32px] border border-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)] backdrop-blur-md p-10 animate-fade-in-up">
+            <div className={`relative z-10 w-full max-w-md bg-white rounded-[28px] p-10 animate-fade-in-up overflow-hidden
+                ${role === 'issuer'
+                    ? 'border-2 border-emerald-400 shadow-[0_8px_32px_rgb(16,185,129,0.18)]'
+                    : role === 'admin'
+                        ? 'border-2 border-violet-400 shadow-[0_8px_32px_rgb(124,58,237,0.18)]'
+                        : 'border-2 border-blue-400 shadow-[0_8px_32px_rgb(37,99,235,0.18)]'
+                }`}>
                 <div className="text-center mb-8 flex flex-col items-center">
-                    <div className="mb-6 w-12 h-12 flex items-center justify-center rounded-full bg-white/[0.05] border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]">
-                        {role === 'issuer' ? <BadgeCheck className="w-6 h-6 text-white stroke-[1.5]" /> : role === 'owner' ? <GraduationCap className="w-6 h-6 text-white stroke-[1.5]" /> : role === 'admin' ? <ShieldCheck className="w-6 h-6 text-white stroke-[1.5]" /> : <Lock className="w-6 h-6 text-white stroke-[1.5]" />}
+                    <div className={`mb-6 w-12 h-12 flex items-center justify-center rounded-2xl border shadow-sm ${
+                        role === 'issuer' ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                        : role === 'admin' ? 'bg-violet-50 border-violet-200 text-violet-600'
+                        : 'bg-blue-50 border-blue-200 text-blue-600'
+                    }`}>
+                        {role === 'issuer' ? <BadgeCheck className="w-6 h-6 stroke-[1.5]" /> : role === 'owner' ? <GraduationCap className="w-6 h-6 stroke-[1.5]" /> : role === 'admin' ? <ShieldCheck className="w-6 h-6 stroke-[1.5]" /> : <Lock className="w-6 h-6 stroke-[1.5]" />}
                     </div>
-                    <h1 className="text-3xl font-semibold tracking-tight text-white">
+                    <h1 className="text-3xl font-semibold tracking-tight text-slate-900">
                         {role === 'issuer' ? 'Issuer Login' : role === 'owner' ? 'Student Login' : role === 'admin' ? 'Admin Login' : 'Login'}
                     </h1>
-                    <p className="text-[#A1A1A1] mt-3 font-normal">
+                    <p className="text-slate-600 mt-3 font-normal">
                         {role === 'issuer' ? 'Issue certificates to students' : role === 'owner' ? 'Login to view and manage your certificates' : 'Blockchain Certificate Platform'}
                     </p>
                 </div>
@@ -83,28 +93,28 @@ export default function LoginPage() {
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Email
                             </label>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                 placeholder="name@example.com"
                                 required
                             />
                         </div>
 
                         <div>
-                            <label className="block text-sm font-medium text-[#A1A1A1] mb-2">
+                            <label className="block text-sm font-medium text-slate-700 mb-2">
                                 Password
                             </label>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 bg-[#0A0A0A] border border-white/[0.08] rounded-2xl text-white focus:outline-none focus:ring-1 focus:ring-white/20 transition-all placeholder:text-zinc-600"
+                                className="w-full px-4 py-3 bg-[#eff6ff]/30 border border-blue-100 rounded-2xl text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 focus:bg-white transition-all placeholder:text-slate-400"
                                 placeholder="••••••••"
                                 required
                             />
@@ -114,20 +124,20 @@ export default function LoginPage() {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full flex items-center justify-center rounded-full bg-white px-6 py-3.5 text-black font-semibold transition-transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_0_15px_rgba(255,255,255,0.1)]"
+                        className="w-full flex items-center justify-center rounded-full bg-blue-600 px-6 py-3.5 text-white font-semibold transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-[0_4px_14px_0_rgb(13,110,253,0.39)]"
                     >
                         {loading ? 'Authenticating...' : <span className="flex items-center">Enter <ArrowUpRight className="ml-2 w-4 h-4 stroke-[2]" /></span>}
                     </button>
                 </form>
 
-                <div className="mt-8 text-center space-y-4 pt-6 border-t border-white/[0.08]">
+                <div className="mt-8 text-center space-y-4 pt-6 border-t border-blue-50">
                     {role === 'owner' && (
                         <div>
-                            <span className="text-sm text-[#A1A1A1]">Don't have an account? </span>
+                            <span className="text-sm text-slate-500">Don't have an account? </span>
                             <button
                                 type="button"
                                 onClick={() => navigate('/student-onboard')}
-                                className="text-sm text-white hover:text-gray-300 font-medium transition-colors"
+                                className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
                             >
                                 Register here
                             </button>
@@ -136,7 +146,7 @@ export default function LoginPage() {
                     <div>
                         <button
                             onClick={() => navigate('/')}
-                            className="text-sm text-[#A1A1A1] hover:text-white transition-colors flex items-center justify-center w-full"
+                            className="text-sm text-slate-500 hover:text-slate-900 transition-colors flex items-center justify-center w-full"
                         >
                             <ChevronLeft className="mr-1 w-4 h-4 stroke-[2]" /> Back to role selection
                         </button>
