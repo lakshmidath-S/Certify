@@ -4,7 +4,7 @@ import { BadgeCheck, Plus, Link as LinkIcon, Ban, RefreshCw, CheckCircle, AlertT
 import { walletAPI } from '../../api';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'http://localhost:3000/api';
 
 export default function AdminDashboard() {
     // Tab state
