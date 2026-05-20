@@ -4,40 +4,35 @@
  * Signs a PDF buffer using a .p12 certificate file.
  * Uses @signpdf/signpdf with @signpdf/signer-p12.
  *
- * The .p12 file path and password are loaded from environment variables:
- *   P12_FILE_PATH  — path to the .p12 file (relative to project root or absolute)
- *   P12_PASSWORD   — password for the .p12 file
+ * The .p12 certificate and password are loaded from environment variables:
+ *   P12_BASE64     — Base64 encoded string of the .p12 certificate
+ *   P12_PASSWORD   — password for the .p12 certificate
  */
-const fs = require('fs');
-const path = require('path');
 const { SignPdf } = require('@signpdf/signpdf');
 const { P12Signer } = require('@signpdf/signer-p12');
 
-// Cache the P12 buffer in memory to avoid repeated disk reads
+// Cache the P12 buffer in memory to avoid repeated Base64 decoding
 let cachedP12Buffer = null;
 
 /**
- * Load the P12 certificate buffer from disk (cached after first load).
+ * Load the P12 certificate buffer from Base64 environment variable.
  */
 function loadP12Buffer() {
     if (cachedP12Buffer) return cachedP12Buffer;
 
-    const p12Path = process.env.P12_FILE_PATH;
-    if (!p12Path) {
-        throw new Error('P12_FILE_PATH environment variable is not set');
+    const p12Base64 = process.env.P12_BASE64;
+    if (!p12Base64) {
+        throw new Error('P12_BASE64 environment variable is not set');
     }
 
-    const resolvedPath = path.isAbsolute(p12Path)
-        ? p12Path
-        : path.resolve(process.cwd(), p12Path);
-
-    if (!fs.existsSync(resolvedPath)) {
-        throw new Error(`P12 certificate file not found at: ${resolvedPath}`);
+    try {
+        cachedP12Buffer = Buffer.from(p12Base64, 'base64');
+        console.log('Loaded P12 certificate from Base64 environment variable');
+        return cachedP12Buffer;
+    } catch (error) {
+        console.error('Failed to decode P12_BASE64 string:', error);
+        throw new Error('Invalid Base64 string in P12_BASE64 environment variable');
     }
-
-    cachedP12Buffer = fs.readFileSync(resolvedPath);
-    console.log(`Loaded P12 certificate from: ${resolvedPath}`);
-    return cachedP12Buffer;
 }
 
 /**
