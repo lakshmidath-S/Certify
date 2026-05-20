@@ -106,24 +106,45 @@ async function verifySingleCertificate(hash) {
     };
 }
 
-/**
- * Perform purely stateless verification from a PDF buffer.
- */
 async function verifyFileStateless(pdfBuffer) {
-    // 1. Extract metadata from PDF
+    const crypto = require('crypto');
+    let verifyPdfSignature;
+    try {
+        verifyPdfSignature = require('./verifySignature').verifyPdfSignature;
+    } catch (e) {}
+
+    // 1. Try Binary Hashing (New Method)
+    if (verifyPdfSignature) {
+        try {
+            const sigResult = verifyPdfSignature(pdfBuffer);
+            if (sigResult.valid) {
+                const pdfHash = crypto.createHash('sha256').update(pdfBuffer).digest('hex');
+                const result = await verifySingleCertificate(pdfHash);
+                
+                if (result.exists) {
+                    try {
+                        const extractedData = await extractCertificateDataFromPDF(pdfBuffer);
+                        if (result.valid && (!result.certificate || !result.certificate.recipientName) && extractedData) {
+                            result.certificateData = extractedData;
+                        }
+                    } catch (e) {}
+                    
+                    return { ...result, hash: pdfHash };
+                }
+            }
+        } catch (e) {}
+    }
+
+    // 2. Try JSON Metadata Hashing (Old Method)
     const certData = await extractCertificateDataFromPDF(pdfBuffer);
     if (!certData) {
         throw new Error('No certificate metadata found in PDF');
     }
 
-    // 2. Recompute Hash
     const { hash } = generateCertificateHash(certData);
-
-    // 3. Verify via Blockchain (Primary) and DB (Hydration)
     const result = await verifySingleCertificate(hash);
 
-    // 4. Add extracted data if DB hydration failed
-    if (result.valid && !result.certificate.recipientName) {
+    if (result.valid && (!result.certificate || !result.certificate.recipientName)) {
         result.certificateData = certData;
     }
 
