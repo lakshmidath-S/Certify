@@ -34,7 +34,7 @@ token expires after **5 minutes** and proves a live MetaMask signature — see
 | Method | Path | Auth | Role |
 | :--- | :--- | :--- | :--- |
 | GET | `/health` | — | — |
-| POST | `/auth/register` | — | — (⚠ see note) |
+| POST | `/auth/register` | — | — (creates `OWNER` only) |
 | POST | `/auth/login` | — | — |
 | POST | `/auth/verify-admin-wallet` | — | — |
 | POST | `/auth/verify-issuer-wallet` | JWT | any |
@@ -75,14 +75,19 @@ token expires after **5 minutes** and proves a live MetaMask signature — see
 
 ### `POST /auth/register`
 
-> ⚠ **Currently broken.** The INSERT statement references `$5` while passing
-> only four parameters, so this endpoint throws at the database. Use the
-> `/student-auth/*` flow for student signup. See
-> [ARCHITECTURE.md §11](../ARCHITECTURE.md#11-known-gaps), gap 1.
+```json
+{ "email": "student@example.com", "password": "secret123", "role": "OWNER",
+  "firstName": "Jane", "lastName": "Doe" }
+```
 
 Public registration is restricted to `OWNER` by design; any other `role` value
 is rejected with *"Invalid registration. Students only. Institutions contact
-admin."*
+admin."* Password minimum is 8 characters here (the `/student-auth` flow uses
+6). The email is stored lowercased.
+
+Returns `201` with the created user. Note that this endpoint creates an account
+without verifying the address — the `/student-auth/*` OTP flow is the intended
+signup path for students.
 
 ### `POST /auth/login`
 
@@ -97,6 +102,9 @@ admin."*
   "user": { "id": "uuid", "email": "...", "role": "OWNER", "firstName": "Jane", "lastName": "Doe" }
 }
 ```
+
+Email matching is case-insensitive, so `Jane@Example.com` and
+`jane@example.com` are the same account.
 
 `401` on bad credentials or when `users.status` is not `ACTIVE` — note that
 revoking an issuer's wallet also sets their status to `REVOKED`, which locks

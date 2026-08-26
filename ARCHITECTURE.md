@@ -335,7 +335,7 @@ erDiagram
 
 | Table | Role |
 | :--- | :--- |
-| `users` | Accounts. `role ∈ {ADMIN, ISSUER, OWNER, VERIFIER}`, `status ∈ {ACTIVE, INACTIVE, SUSPENDED, REVOKED}` |
+| `users` | Accounts. `role ∈ {ADMIN, ISSUER, OWNER, VERIFIER}`, `status ∈ {ACTIVE, INACTIVE, SUSPENDED, REVOKED}`. Email is a case-insensitive identity: stored lowercase, read via `LOWER(email)`, and unique on `LOWER(email)` |
 | `wallets` | Issuer wallet ↔ user mapping; `mapped_tx_hash`, `revoked_at`, `revoked_tx_hash` |
 | `certificates` | One row per issued credential; `certificate_hash` is UNIQUE; the newer fields live in `additional_info` JSONB |
 | `certificate_files` | PDF/QR file references; `file_path` stores a **bare filename**, resolved against the storage directory |
@@ -451,8 +451,7 @@ Verified against the current tree. None of these are speculative.
 | 5 | Certificate revocation has a contract function and database columns but no API route | Revoking one credential requires calling the contract directly. |
 | 6 | `schema.sql` seeds `admin@certify.com` with a placeholder bcrypt string | That account cannot be logged into. Use `backend/scripts/reset-db.js`, which seeds real hashes. |
 | 7 | RLS policies on `certificates` depend on a GUC the application never sets | The policies are inert; authorization is application-level only. |
-| 8 | Login matches `email` case-sensitively while `studentAuth` stores emails lowercased | Accounts created with mixed-case emails through a path that does not normalize would not match at login. Normalize on both sides if you touch it. |
-| 9 | There are no automated tests for the backend HTTP layer | Only the contracts (`contracts/test/`) and the `backend/test-signing.js` round trip are covered. |
+| 8 | There are no automated tests for the backend HTTP layer | Only the contracts (`contracts/test/`) and the `backend/test-signing.js` round trip are covered. |
 
 ### Recently fixed
 
@@ -462,3 +461,4 @@ Verified against the current tree. None of these are speculative.
 | The root `.env` defined `P12_FILE_PATH` while `signPdf.js` reads `P12_BASE64`, so PDF signing threw | `generate-cert.js` now emits Base64 and can patch `.env` via `--write-env` |
 | Four entry points resolved `.env` from three different locations | All load through `src/config/loadEnv.js` |
 | `server.js` defaulted the port to 5000 while `config/env.js` and the frontend assumed 3000 | Single source of truth: `config.server.port` |
+| Login matched `email` case-sensitively while `studentAuth` and `admin/create-issuer` stored it lowercased, so an account created as `Registrar@Example.edu` could not log in with that casing | All reads use `LOWER(email) = LOWER($1)`, all writes store lowercase, and a unique index on `LOWER(email)` makes case-variant duplicates impossible. Existing databases need `backend/migrations/2026-08-26-email-case-insensitive.sql` |

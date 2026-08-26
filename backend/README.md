@@ -145,6 +145,19 @@ The `INSERT` at the end of `schema.sql` seeds `admin@certify.com` with a
 **placeholder** hash that no password matches. It exists to keep the schema
 self-contained, not to give you a usable login.
 
+### Migrations
+
+There is no migration runner. `migrations/` holds dated SQL files to apply by
+hand, newest last, against databases created before the change they describe.
+Databases created fresh from `schema.sql` already include them.
+
+```bash
+psql "$DATABASE_URL" -f migrations/2026-08-26-email-case-insensitive.sql
+```
+
+Read each file before running it — some begin with a check query whose result
+decides whether the rest is safe to apply.
+
 ---
 
 ## Run

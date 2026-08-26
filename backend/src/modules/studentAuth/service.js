@@ -16,8 +16,8 @@ async function requestOTP(email) {
 
     // Check if user already exists
     const existingUser = await db.query(
-        'SELECT id FROM users WHERE email = $1',
-        [email.toLowerCase()]
+        'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+        [email]
     );
 
     if (existingUser.rows.length > 0) {
@@ -86,8 +86,8 @@ async function completeRegistration(email, password, firstName, lastName) {
 
     // Check if user already exists
     const existingUser = await db.query(
-        'SELECT id FROM users WHERE email = $1',
-        [email.toLowerCase()]
+        'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+        [email]
     );
 
     if (existingUser.rows.length > 0) {

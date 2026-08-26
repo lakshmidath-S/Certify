@@ -25,8 +25,8 @@ async function createIssuer(adminUserId, issuerData) {
 
     // Check if email already exists
     const existingUser = await db.query(
-        'SELECT id FROM users WHERE email = $1',
-        [officialEmail.toLowerCase()]
+        'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
+        [officialEmail]
     );
 
     if (existingUser.rows.length > 0) {

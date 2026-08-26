@@ -33,7 +33,10 @@ CREATE TABLE users (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_users_email ON users(email);
+-- Emails are case-insensitive identities: Jane@x.com and jane@x.com are the
+-- same account. This unique functional index enforces that, and is the index
+-- the LOWER(email) lookups in the auth paths use.
+CREATE UNIQUE INDEX idx_users_email_lower ON users(LOWER(email));
 CREATE INDEX idx_users_role ON users(role);
 CREATE INDEX idx_users_status ON users(status);
 

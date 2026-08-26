@@ -1,6 +1,5 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
-const { v4: uuidv4 } = require('uuid');
 const db = require('../../db/pool');
 const config = require('../../config/env');
 
@@ -13,9 +12,8 @@ async function register(userData) {
         throw new Error('Invalid registration. Students only. Institutions contact admin.');
     }
 
-    const userId = uuidv4();
     const existingUser = await db.query(
-        'SELECT id FROM users WHERE email = $1',
+        'SELECT id FROM users WHERE LOWER(email) = LOWER($1)',
         [email]
     );
 
@@ -29,7 +27,7 @@ async function register(userData) {
         `INSERT INTO users (email, password_hash, role, first_name, last_name)
      VALUES ($1, $2, 'OWNER', $3, $4)
      RETURNING id, email, role, first_name, last_name, created_at`,
-        [email, passwordHash, firstName, lastName]
+        [email.toLowerCase(), passwordHash, firstName, lastName]
     );
 
     return result.rows[0];
@@ -39,7 +37,7 @@ async function login(email, password) {
     const result = await db.query(
         `SELECT id, email, password_hash, role, status, first_name, last_name
      FROM users
-     WHERE email = $1`,
+     WHERE LOWER(email) = LOWER($1)`,
         [email]
     );
 
