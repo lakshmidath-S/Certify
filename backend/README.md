@@ -1,309 +1,236 @@
-# CERTIFY Backend API
+# CERTIFY Backend
 
-Production-ready Node.js backend for CERTIFY blockchain-backed certificate platform.
+Express API for the CERTIFY credential platform. Owns the canonical hash, PDF
+generation and signing, blockchain reads, admin-side chain writes, and the
+verification pipeline.
 
-## Features
+- **Endpoint reference** → [API.md](API.md)
+- **How the pieces fit together** → [../ARCHITECTURE.md](../ARCHITECTURE.md)
 
-- ✅ JWT Authentication
-- ✅ Role-Based Access Control (ADMIN, ISSUER, OWNER, VERIFIER)
-- ✅ PostgreSQL Database with Connection Pooling
-- ✅ Blockchain Integration (Base Sepolia)
-- ✅ Certificate Hash Generation (SHA256)
-- ✅ Certificate Verification (DB + Blockchain)
-- ✅ Wallet Management
-- ✅ Audit Logging
+---
 
-## Tech Stack
+## Stack
 
-- **Runtime**: Node.js
-- **Framework**: Express.js
-- **Database**: PostgreSQL (Neon)
-- **Blockchain**: Ethers.js (Base Sepolia)
-- **Auth**: JWT + bcrypt
-- **Utilities**: uuid, crypto
+Node.js 18+ · Express 4 · PostgreSQL via `pg` pool · JWT + bcrypt · Ethers v6 ·
+`pdf-lib` · `@signpdf/signpdf` + `@signpdf/signer-p12` + `@signpdf/placeholder-pdf-lib` ·
+`node-forge` · `qrcode` · `multer`.
 
-## Installation
+No build step — plain CommonJS, run directly.
+
+---
+
+## Layout
+
+```text
+backend/
+├── API.md                 # endpoint reference
+├── schema.sql             # 8 tables + indexes + RLS policies + seed
+├── generate-cert.js       # self-signed .p12 + Base64 for P12_BASE64
+├── test-signing.js        # sign → verify → tamper → must reject
+├── scripts/
+│   ├── reset-db.js        # drop, re-apply schema, seed real admin hashes
+│   ├── check-schema.js    # print the live `wallets` table shape
+│   └── test-api.ps1       # manual smoke pass
+└── src/
+    ├── server.js          # boot: DB ping, listen, SIGTERM/SIGINT drain
+    ├── app.js             # cors, json (10 MB), request log, /api, error handler
+    ├── config/
+    │   ├── loadEnv.js     # deterministic .env resolution (backend/ then root)
+    │   ├── env.js         # fail-fast validation; exports typed config
+    │   └── blockchain.js  # provider, admin signer, contract handles, chain calls
+    ├── db/pool.js         # pool, timed query(), getClient() for transactions
+    ├── middleware/
+    │   ├── authMiddleware.js         # Bearer JWT → req.user
+    │   ├── roleMiddleware.js         # requireRole('ADMIN', ...)
+    │   └── requireIssuerSignature.js # 5-min signing token → req.issuerWallet
+    ├── routes/index.js    # mounts every module under /api
+    └── modules/
+        ├── auth/          # login, profile, wallet gate checks
+        ├── studentAuth/   # OTP request → verify → complete registration
+        ├── admin/         # create issuer, list issuers
+        ├── walletAuth/    # challenge → signature → signing token
+        ├── wallets/       # map / revoke (on-chain + DB, transactional)
+        ├── certificates/  # prepare, issue, list, download
+        │   ├── hash.js       # canonical JSON + SHA-256  ← the core
+        │   ├── pdf.js        # pdf-lib render, /Subject metadata, sig placeholder
+        │   ├── signPdf.js    # P12 signing from P12_BASE64
+        │   └── qr.js         # QR PNG of the hash
+        └── verification/
+            ├── service.js         # verify-then-hydrate
+            └── verifySignature.js # PKCS#7 verification via node-forge
+```
+
+Every module follows the same three-file shape: `routes.js` (paths + middleware)
+→ `controller.js` (validation + HTTP shaping) → `service.js` (business logic,
+database, chain). Keep new modules to that shape.
+
+---
+
+## Setup
 
 ```bash
 cd backend
 npm install
-```
-
-## Environment Setup
-
-1. Copy `.env.example` to `.env`:
-```bash
 cp .env.example .env
 ```
 
-2. Edit `.env` with your credentials:
-```env
-DATABASE_URL=postgresql://user:password@host:5432/certify
-JWT_SECRET=your_jwt_secret_min_32_chars
-RPC_URL=https://sepolia.base.org
-CONTRACT_WALLET_REGISTRY=0xD1abe7Ab545C0e2651cFA11c032dDcbc6c9FFCc7
-CONTRACT_CERT_REGISTRY=0x16D55c44e8c7A6a2e9DF4c1A18fA75a0EAaD15cf
+### Environment
+
+`src/config/env.js` exits at boot if any of `DATABASE_URL`, `JWT_SECRET`,
+`RPC_URL`, `CONTRACT_WALLET_REGISTRY`, or `CONTRACT_CERT_REGISTRY` is missing,
+or if `JWT_SECRET` is under 32 characters.
+
+```bash
+DATABASE_URL=postgresql://user:password@host:5432/dbname?sslmode=require
 PORT=3000
+NODE_ENV=development
+
+JWT_SECRET=<at least 32 characters>
+JWT_EXPIRES_IN=1h
+
+RPC_URL=https://sepolia.base.org
+CONTRACT_WALLET_REGISTRY=0x82ee75E1D5E03Dd6C035600103D8aC29b4a018a6
+CONTRACT_CERT_REGISTRY=0xb5B043baC7e5F734862Dcc9De25f6cc2bf171Ce9
+DEPLOYER_PRIVATE_KEY=<admin wallet key — signs WalletRegistry writes only>
+ADMIN_WALLET_ADDRESS=0x<address the admin login screen accepts>
+
+P12_BASE64=<base64 of the .p12 file>
+P12_PASSWORD=<its passphrase>
 ```
 
-## Database Setup
+Generate a JWT secret:
 
-1. Create PostgreSQL database (Neon recommended)
-
-2. Run schema migration:
 ```bash
-psql $DATABASE_URL < schema.sql
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-Or manually execute `schema.sql` in your database client.
+**`.env` location.** Everything loads through `src/config/loadEnv.js`, which
+takes `backend/.env` if it exists and otherwise the repo-root `.env`, then falls
+back to host-injected variables. The server, all scripts, and `test-signing.js`
+share that resolution, so it no longer matters which directory you run from.
+`contracts/hardhat.config.js` reads the repo-root `.env` directly.
 
-## Run Server
+**The P12 variable is `P12_BASE64`, not `P12_FILE_PATH`.** Signing moved from the
+filesystem to an environment variable so the service can run on ephemeral hosts.
+There is no filesystem fallback; `P12_FILE_PATH` is ignored.
 
-### Development
+### Generate a signing certificate (development)
+
 ```bash
-npm start
+node generate-cert.js --write-env    # generate + patch P12_BASE64 into .env
+node generate-cert.js                # generate + print the values instead
 ```
 
-### With Auto-Reload (Node 18+)
+The passphrase comes from `P12_PASSWORD` when it is already set, so re-running
+will not invalidate an existing configuration. `certs/` is git-ignored.
+
+Confirm it works with `node test-signing.js`. Use a real CA-issued certificate in
+production — a self-signed one will not show as trusted in Adobe Acrobat, though
+CERTIFY's own verifier still validates it.
+
+### Database
+
 ```bash
-npm run dev
+psql "$DATABASE_URL" -f schema.sql
 ```
 
-Server will start on `http://localhost:3000`
+Prefer the reset script for a fresh environment — it applies the schema and
+seeds admin accounts with real bcrypt hashes:
 
-## API Endpoints
-
-### Authentication
-
-**Register User**
-```http
-POST /api/auth/register
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123",
-  "role": "ISSUER",
-  "firstName": "John",
-  "lastName": "Doe"
-}
+```bash
+node scripts/reset-db.js
 ```
 
-**Login**
-```http
-POST /api/auth/login
-Content-Type: application/json
+The `INSERT` at the end of `schema.sql` seeds `admin@certify.com` with a
+**placeholder** hash that no password matches. It exists to keep the schema
+self-contained, not to give you a usable login.
 
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
+---
+
+## Run
+
+```bash
+npm run dev     # node --watch src/server.js
+npm start       # node src/server.js
 ```
 
-**Get Profile**
-```http
-GET /api/auth/profile
-Authorization: Bearer <token>
-```
+On boot the server pings the database and refuses to listen if that fails, then
+prints the environment, RPC URL, and both contract addresses.
 
-### Wallets (Admin Only)
+> **Port:** single source of truth is `config.server.port`
+> (`process.env.PORT || 3000`), matching the frontend default and the Vite dev
+> proxy.
 
-**Map Wallet**
-```http
-POST /api/wallets/map
-Authorization: Bearer <admin_token>
-Content-Type: application/json
+---
 
-{
-  "walletAddress": "0x...",
-  "userId": "uuid",
-  "adminPrivateKey": "0x..."
-}
-```
+## Scripts
 
-**Revoke Wallet**
-```http
-POST /api/wallets/revoke
-Authorization: Bearer <admin_token>
-Content-Type: application/json
+| Command | What it does |
+| :--- | :--- |
+| `npm run dev` | Watch-mode server |
+| `npm start` | Production server |
+| `node scripts/reset-db.js` | **Destructive.** Drops all tables, re-applies the schema, seeds admins |
+| `node scripts/check-schema.js` | Prints the live `wallets` table columns |
+| `node generate-cert.js [--write-env]` | Writes a self-signed `certs/certificate.p12`; `--write-env` patches `P12_BASE64` into `.env` |
+| `node test-signing.js` | Signs a PDF, verifies it, tampers with it, and asserts rejection |
+| `scripts/test-api.ps1` | ⚠ **Stale.** Registers an `ISSUER` through `/auth/register`, which only accepts `OWNER`. Health check and login sections still work |
 
-{
-  "walletAddress": "0x...",
-  "reason": "Violation of terms",
-  "adminPrivateKey": "0x..."
-}
-```
+`reset-db.js` seeds one admin: **`admin@certify.com` / `Admin@123`**. It is a
+development default printed to the console on every run — change it before any
+deployment that is reachable from the internet.
 
-**Get Wallet**
-```http
-GET /api/wallets/:address
-Authorization: Bearer <token>
-```
+---
 
-**Get My Wallets**
-```http
-GET /api/wallets/my-wallets
-Authorization: Bearer <token>
-```
+## Conventions
 
-### Certificates (Issuer Only)
+**Responses.** `{ success: true, ... }` or `{ success: false, error }`. The
+error handler in `app.js` adds `stack` only when `NODE_ENV=development`.
 
-**Issue Certificate**
-```http
-POST /api/certificates/issue
-Authorization: Bearer <issuer_token>
-Content-Type: application/json
+**Transactions.** Anything touching the chain *and* the database uses
+`db.getClient()` with explicit `BEGIN` / `COMMIT` / `ROLLBACK` and a `finally`
+release — see `wallets/service.js` and `certificates/service.js`. Chain calls go
+*inside* the transaction so a revert rolls back the row.
 
-{
-  "certificateNumber": "CERT-2024-001",
-  "recipientName": "Jane Smith",
-  "recipientEmail": "jane@example.com",
-  "courseName": "Blockchain Development",
-  "courseDuration": "6 months",
-  "grade": "A+",
-  "issueDate": "2024-01-31",
-  "expiryDate": "2029-01-31",
-  "ownerId": "uuid",
-  "issuerWalletId": "uuid",
-  "issuerWalletAddress": "0x...",
-  "issuerPrivateKey": "0x...",
-  "additionalInfo": {}
-}
-```
+**Audit logging.** Every state-changing action writes to `audit_logs`, including
+failures. In `issueCertificate` the failure log is deliberately written after
+`ROLLBACK` so it survives.
 
-**Get Certificate by Hash**
-```http
-GET /api/certificates/:hash
-Authorization: Bearer <token>
-```
+**Chain errors.** `blockchain.js` unwraps `error.reason` / `error.data.message` /
+`error.shortMessage` so the real revert reason — `"WalletRegistry: wallet
+already mapped"` — reaches the client instead of a generic message.
 
-**Get My Certificates**
-```http
-GET /api/certificates/my-certificates?limit=50&offset=0
-Authorization: Bearer <token>
-```
+**Nonces.** `mapWallet` and `revokeWallet` pass an explicit `nonce` from
+`adminSigner.getNonce()` to avoid stale-nonce collisions across back-to-back
+admin transactions.
 
-### Verification (Public)
-
-**Verify Single Certificate**
-```http
-POST /api/verify/hash
-Content-Type: application/json
-
-{
-  "hash": "abc123..."
-}
-```
-
-**Verify Bulk Certificates**
-```http
-POST /api/verify/bulk
-Content-Type: application/json
-
-{
-  "hashes": ["hash1", "hash2", "hash3"]
-}
-```
-
-**Health Check**
-```http
-GET /api/health
-```
-
-## Verification Statuses
-
-- `VALID` - Certificate is valid
-- `NOT_FOUND` - Certificate doesn't exist
-- `NOT_ON_CHAIN` - Certificate not found on blockchain
-- `REVOKED` - Certificate has been revoked
-- `ISSUER_REVOKED` - Issuer wallet has been revoked
-- `INVALID_ON_CHAIN` - Certificate is invalid on blockchain
-- `TAMPERED` - Certificate metadata has been tampered with
-
-## Database Schema
-
-### Tables
-- `users` - User accounts with roles
-- `wallets` - Issuer wallet mappings
-- `certificates` - Certificate records
-- `certificate_files` - PDF/QR file references
-- `audit_logs` - System audit trail
-- `revocations` - Revocation records
-
-## Security
-
-- JWT tokens expire in 1 hour
-- Passwords hashed with bcrypt (10 rounds)
-- Role-based access control on all endpoints
-- Blockchain signature verification for wallet operations
-- Comprehensive audit logging
-- SQL injection prevention via parameterized queries
-
-## Error Handling
-
-All API responses follow this format:
-
-**Success**
-```json
-{
-  "success": true,
-  "data": {}
-}
-```
-
-**Error**
-```json
-{
-  "success": false,
-  "error": "Error message"
-}
-```
-
-## Development
-
-### Project Structure
-```
-backend/
-├── src/
-│   ├── config/
-│   │   ├── env.js
-│   │   └── blockchain.js
-│   ├── db/
-│   │   └── pool.js
-│   ├── middleware/
-│   │   ├── authMiddleware.js
-│   │   └── roleMiddleware.js
-│   ├── modules/
-│   │   ├── auth/
-│   │   ├── wallets/
-│   │   ├── certificates/
-│   │   └── verification/
-│   ├── routes/
-│   │   └── index.js
-│   ├── app.js
-│   └── server.js
-├── schema.sql
-├── package.json
-└── .env
-```
+---
 
 ## Troubleshooting
 
-### Database Connection Error
-- Verify `DATABASE_URL` is correct
-- Check database is running and accessible
-- Ensure schema is migrated
+| Symptom | Cause |
+| :--- | :--- |
+| `Missing required environment variables` at boot | No `backend/.env` or repo-root `.env`, or a variable genuinely unset — the log names them |
+| `JWT_SECRET must be at least 32 characters long` | Exactly that; regenerate |
+| `P12_BASE64 environment variable is not set` | Run `node generate-cert.js --write-env` |
+| `Failed to start server` right after launch | The startup `SELECT NOW()` failed — bad `DATABASE_URL`, IP not allowlisted, or SSL mismatch |
+| `Wallet is not a valid issuer on blockchain` | The wallet exists in the database but `mapWallet` never landed on chain, or it was revoked |
+| `Signing token expired. Please sign again.` | The 5-minute signing token lapsed — re-sign the challenge |
+| `No registered student found with email: …` | The student must complete `/student-auth/*` before a certificate can be issued to them |
+| `Duplicate certificate hash` / `certificate hash already exists` | All eight hashed fields match an existing certificate — the hash is a content identity, so vary a field |
+| Verification returns `CHAIN_ERROR` | The RPC endpoint is unreachable. Inconclusive, not a verdict on the certificate |
+| Downloaded PDF fails a signature check | It was regenerated after the stored file was lost; regenerated PDFs aren't re-signed |
 
-### Blockchain Connection Error
-- Verify `RPC_URL` is correct
-- Check contract addresses are deployed
-- Ensure network is Base Sepolia
+---
 
-### JWT Error
-- Ensure `JWT_SECRET` is at least 32 characters
-- Check token is being sent in Authorization header
-- Verify token hasn't expired
+## Known gaps
+
+OTPs are returned in the API response instead of emailed, CORS is fully open,
+there is no rate limiting, and certificate-level revocation has no route. The
+full list with impact is in
+[ARCHITECTURE.md §11](../ARCHITECTURE.md#11-known-gaps).
+
+---
 
 ## License
 
-MIT
+MIT.

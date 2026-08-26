@@ -1,195 +1,239 @@
-# CERTIFY - Blockchain Contracts
+# CERTIFY — Smart Contracts
 
-Production-ready smart contracts for CERTIFY certificate issuance and verification platform.
+Hardhat workspace for the two contracts that hold CERTIFY's trust anchor:
+an admin-controlled issuer allowlist, and a hash registry that consults it.
+
+- **How the contracts fit the system** → [../ARCHITECTURE.md §9](../ARCHITECTURE.md#9-smart-contracts)
+
+Solidity 0.8.20, optimizer enabled (200 runs), targeting Base Sepolia
+(chain ID `84532`).
+
+---
 
 ## Contracts
 
-### WalletRegistry.sol
-Admin-controlled contract for managing issuer wallet authorization.
+### `WalletRegistry.sol`
 
-**Functions:**
-- `mapWallet(address issuer)` - Map new issuer wallet (admin only)
-- `revokeWallet(address issuer)` - Revoke issuer wallet (admin only)
-- `isValidIssuer(address issuer)` - Check if issuer is valid
+The institutional allowlist. Only the admin can change it.
 
-### CertificateRegistry.sol
-Stores and manages certificate hashes with issuer validation.
+| Function | Access | Notes |
+| :--- | :--- | :--- |
+| `mapWallet(address issuer)` | `onlyAdmin` | Rejects the zero address and already-mapped wallets; stamps `mappedAt` |
+| `revokeWallet(address issuer)` | `onlyAdmin` | Rejects unmapped wallets; stamps `revokedAt` |
+| `isValidIssuer(address) → bool` | view | The single read the rest of the system depends on |
+| `transferAdmin(address newAdmin)` | `onlyAdmin` | Rejects the zero address and the current admin |
 
-**Functions:**
-- `storeCertificateHash(bytes32 hash)` - Store certificate hash (valid issuer only)
-- `revokeCertificate(bytes32 hash)` - Revoke certificate (admin only)
-- `isValidCertificate(bytes32 hash)` - Check certificate validity
-- `getCertificateInfo(bytes32 hash)` - Get certificate details
+Public state: `admin`, `validIssuer`, `mappedAt`, `revokedAt`.
+Events: `WalletMapped`, `WalletRevoked`, `AdminTransferred`.
 
-## Installation
+The constructor makes the deployer the admin.
+
+### `CertificateRegistry.sol`
+
+The hash anchor. Constructed with the `WalletRegistry` address, which it holds
+as an `IWalletRegistry` and queries on both writes and reads.
+
+| Function | Access | Notes |
+| :--- | :--- | :--- |
+| `storeCertificateHash(bytes32 hash)` | `onlyValidIssuer` | Rejects the zero hash and duplicates; records `msg.sender` as issuer |
+| `revokeCertificate(bytes32 hash)` | `onlyAdmin` | Rejects unknown and already-revoked hashes |
+| `isValidCertificate(bytes32) → bool` | view | True only if it exists, isn't revoked, **and its issuer is still valid** |
+| `getCertificateInfo(bytes32)` | view | `(issuer, issuedAt, revoked, revokedAt)` |
+| `transferAdmin(address newAdmin)` | `onlyAdmin` | — |
+
+Public state: `admin`, `walletRegistry`, `certificates`.
+Events: `CertificateStored`, `CertificateRevoked`, `AdminTransferred`.
+
+**The design point worth understanding:** `isValidCertificate` re-checks the
+issuer's standing in `WalletRegistry` on *every* call, rather than trusting the
+check performed at storage time. That is what makes a single `revokeWallet`
+transaction invalidate every certificate that institution ever issued —
+retroactively and without touching a single certificate record.
+
+### `IWalletRegistry.sol`
+
+One-function interface (`isValidIssuer`) so `CertificateRegistry` can call the
+registry without importing its implementation.
+
+---
+
+## Setup
 
 ```bash
 cd contracts
 npm install
 ```
 
-## Environment Setup
+`hardhat.config.js` loads the **repo-root** `.env` (`../.env`), not
+`contracts/.env`. It needs:
 
-1. Copy `.env.example` to `.env`:
 ```bash
-cp .env.example .env
-```
-
-2. Edit `.env` and add your credentials:
-```
 RPC_URL=https://sepolia.base.org
-DEPLOYER_PRIVATE_KEY=your_private_key_here
+DEPLOYER_PRIVATE_KEY=<key with Base Sepolia ETH>   # ⚠ never commit
 ```
 
-## Compile Contracts
+The deployer becomes the admin of both contracts and is the same key the backend
+uses as `DEPLOYER_PRIVATE_KEY` for `mapWallet` / `revokeWallet`. Keep them in
+sync — if they diverge, the backend's admin calls revert with
+`caller is not admin`.
+
+---
+
+## Compile and test
 
 ```bash
 npx hardhat compile
-```
-
-## Run Tests
-
-```bash
 npx hardhat test
-```
-
-For detailed test output:
-```bash
-npx hardhat test --verbose
-```
-
-For gas reporting:
-```bash
 REPORT_GAS=true npx hardhat test
 ```
 
-## Deploy Contracts
+The suite covers deployment, mapping, revocation, storage, duplicate rejection,
+timestamps, admin transfer, access control on every guarded function, and — the
+important one — that `isValidCertificate` returns `false` once the issuer wallet
+is revoked.
 
-### Local Network
+---
 
-1. Start local Hardhat node:
+## Deploy
+
+### Everything at once (recommended)
+
 ```bash
-npx hardhat node
+npx hardhat run scripts/deploy-all.js --network baseSepolia
 ```
 
-2. Deploy WalletRegistry (in new terminal):
-```bash
-npx hardhat run scripts/deploy-wallet-registry.js --network localhost
-```
+Deploys `WalletRegistry`, then `CertificateRegistry` wired to it, and writes
+`deployed-addresses.json` with the deployer, network, both addresses, and a
+timestamp.
 
-3. Deploy CertificateRegistry (use WalletRegistry address from step 2):
-```bash
-npx hardhat run scripts/deploy-certificate-registry.js --network localhost 0xWALLET_REGISTRY_ADDRESS
-```
+### Individually
 
-### Base Sepolia Testnet
-
-1. Ensure `.env` is configured with Base Sepolia RPC URL and funded deployer private key
-
-2. Deploy WalletRegistry:
 ```bash
 npx hardhat run scripts/deploy-wallet-registry.js --network baseSepolia
+npx hardhat run scripts/deploy-certificate-registry.js --network baseSepolia
 ```
 
-3. Deploy CertificateRegistry:
+### Locally
+
 ```bash
-npx hardhat run scripts/deploy-certificate-registry.js --network baseSepolia 0xWALLET_REGISTRY_ADDRESS
+npx hardhat node                                                    # terminal 1
+npx hardhat run scripts/deploy-all.js --network localhost           # terminal 2
 ```
 
-## Custom Tasks
+### After deploying
 
-### Check Current Block Number
+The addresses are referenced in three places. All three must be updated:
+
+1. `backend` env — `CONTRACT_WALLET_REGISTRY`, `CONTRACT_CERT_REGISTRY`
+2. `frontend/src/wallet/walletService.js` — `CERT_REGISTRY_ADDRESS` is hardcoded
+3. `README.md` and `deployed-addresses.json`
+
+---
+
+## Current deployment
+
+Base Sepolia, per [`deployed-addresses.json`](deployed-addresses.json):
+
+| Contract | Address |
+| :--- | :--- |
+| WalletRegistry | `0x82ee75E1D5E03Dd6C035600103D8aC29b4a018a6` |
+| CertificateRegistry | `0xb5B043baC7e5F734862Dcc9De25f6cc2bf171Ce9` |
+| Deployer / admin | `0xFA258b9F026aCA36000374c795F6656f370AC33e` |
+
+Network: chain ID `84532` · RPC `https://sepolia.base.org` · explorer
+`https://sepolia.basescan.org`.
+
+---
+
+## Custom tasks
+
 ```bash
-npx hardhat check-block --network baseSepolia
+npx hardhat check-block   --network baseSepolia   # current block number
+npx hardhat check-balance --network baseSepolia   # deployer address + ETH balance
 ```
 
-### Check Deployer Balance
-```bash
-npx hardhat check-balance --network baseSepolia
-```
+---
 
-## Contract Interaction Examples
-
-### Using Hardhat Console
+## Console recipes
 
 ```bash
 npx hardhat console --network baseSepolia
 ```
 
 ```javascript
-// Get contract instances
-const WalletRegistry = await ethers.getContractFactory("WalletRegistry");
-const walletRegistry = WalletRegistry.attach("0xWALLET_REGISTRY_ADDRESS");
+const wr = (await ethers.getContractFactory("WalletRegistry")).attach("0x82ee...");
+const cr = (await ethers.getContractFactory("CertificateRegistry")).attach("0xb5B0...");
 
-const CertificateRegistry = await ethers.getContractFactory("CertificateRegistry");
-const certificateRegistry = CertificateRegistry.attach("0xCERT_REGISTRY_ADDRESS");
+await wr.mapWallet("0xISSUER");
+await wr.isValidIssuer("0xISSUER");
 
-// Map an issuer wallet
-const [admin] = await ethers.getSigners();
-await walletRegistry.mapWallet("0xISSUER_ADDRESS");
-
-// Check if issuer is valid
-const isValid = await walletRegistry.isValidIssuer("0xISSUER_ADDRESS");
-console.log("Is valid issuer:", isValid);
-
-// Store certificate hash
-const hash = ethers.keccak256(ethers.toUtf8Bytes("certificate_data"));
-await certificateRegistry.storeCertificateHash(hash);
-
-// Verify certificate
-const valid = await certificateRegistry.isValidCertificate(hash);
-console.log("Certificate valid:", valid);
+// Certificate hashes are the backend's canonical SHA-256, hex-prefixed —
+// not keccak256 of arbitrary text.
+await cr.isValidCertificate("0x" + "<64-hex-char hash>");
+await cr.getCertificateInfo("0x" + "<64-hex-char hash>");
 ```
 
-## Network Configuration
+**Revoking a single certificate** has no API route in the backend — the contract
+function exists and `revokeCertificateOnChain()` is defined but unreferenced. Do
+it from the console as admin:
 
-### Base Sepolia
-- **Chain ID:** 84532
-- **RPC URL:** https://sepolia.base.org
-- **Block Explorer:** https://sepolia.basescan.org
+```javascript
+await cr.revokeCertificate("0x" + "<64-hex-char hash>");
+```
 
-## Security Notes
+Verification will then report `REVOKED_ON_CHAIN`.
 
-- Never commit `.env` file to version control
-- Keep private keys secure
-- Admin role has critical permissions - protect admin account
-- Test thoroughly on testnet before mainnet deployment
-- Consider multi-sig wallet for admin role in production
+---
+
+## Security notes
+
+- The admin key controls the entire issuer allowlist. A multi-sig is the right
+  answer for anything beyond a testnet.
+- `transferAdmin` is the migration path off a compromised admin key — but only
+  if you still control the current one. There is no recovery otherwise.
+- Never commit `.env` or a private key. See [../SECURITY.md](../SECURITY.md).
+- Certificate hashes are public on chain. They reveal nothing on their own, but
+  because the hash is deterministic over known fields, someone who can guess all
+  eight fields can confirm a specific credential exists. Treat certificate
+  existence as public information.
+
+---
 
 ## Troubleshooting
 
-### "Insufficient funds" error
-Ensure deployer wallet has enough ETH for gas fees. Get testnet ETH from Base Sepolia faucet.
+| Error | Cause |
+| :--- | :--- |
+| `insufficient funds` | Deployer needs Base Sepolia ETH from a faucet |
+| `caller is not admin` | Signing key isn't the deploying key — check `DEPLOYER_PRIVATE_KEY` |
+| `caller is not a valid issuer` | `mapWallet` was never run for that address, or it was revoked |
+| `certificate hash already exists` | All eight hashed fields match an existing certificate |
+| `wallet already mapped` | Address is already in the allowlist |
+| `nonce too high` | Reset the local Hardhat node, or wait for pending transactions |
+| `invalid address` | Wrong `WalletRegistry` address passed to the `CertificateRegistry` deploy |
 
-### "Invalid address" error
-Verify WalletRegistry address is correct when deploying CertificateRegistry.
+---
 
-### "Nonce too high" error
-Reset Hardhat network or wait for pending transactions to complete.
+## Layout
 
-### Tests failing
-Ensure you're using Node.js v18+ and all dependencies are installed.
-
-## Project Structure
-
-```
+```text
 contracts/
 ├── contracts/
 │   ├── WalletRegistry.sol
 │   ├── CertificateRegistry.sol
 │   └── IWalletRegistry.sol
 ├── scripts/
+│   ├── deploy-all.js
 │   ├── deploy-wallet-registry.js
 │   └── deploy-certificate-registry.js
 ├── test/
 │   ├── WalletRegistry.test.js
 │   └── CertificateRegistry.test.js
-├── hardhat.config.js
-├── package.json
-├── .env.example
-└── README.md
+├── deployed-addresses.json
+└── hardhat.config.js
 ```
+
+---
 
 ## License
 
-MIT
+MIT.

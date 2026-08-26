@@ -27,7 +27,7 @@ async function register(userData) {
 
     const result = await db.query(
         `INSERT INTO users (email, password_hash, role, first_name, last_name)
-     VALUES ($1, $2, 'OWNER', $4, $5)
+     VALUES ($1, $2, 'OWNER', $3, $4)
      RETURNING id, email, role, first_name, last_name, created_at`,
         [email, passwordHash, firstName, lastName]
     );
