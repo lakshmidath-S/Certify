@@ -1,4 +1,4 @@
-require('dotenv').config();
+require('./loadEnv');
 
 const requiredEnvVars = [
     'DATABASE_URL',
