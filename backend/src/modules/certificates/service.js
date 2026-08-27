@@ -1,22 +1,11 @@
-const fs = require('fs').promises;
-const path = require('path');
 const { v4: uuidv4 } = require('uuid');
 const db = require('../../db/pool');
 const { generateCertificateHash } = require('./hash');
 const { generateQR } = require('./qr');
 const { generatePDF } = require('./pdf');
 const { signPdfBuffer } = require('./signPdf');
+const { writeCertificatePdf } = require('./storage');
 const { isIssuerValidOnChain } = require('../../config/blockchain');
-
-const STORAGE_DIR = path.join(__dirname, '../../../storage/certificates');
-
-async function ensureStorageDir() {
-    try {
-        await fs.access(STORAGE_DIR);
-    } catch {
-        await fs.mkdir(STORAGE_DIR, { recursive: true });
-    }
-}
 
 async function prepareCertificate(certificateData, issuerWalletFromToken) {
     const {
@@ -63,7 +52,6 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
 
     try {
         await client.query('BEGIN');
-        await ensureStorageDir();
 
         const {
             ownerName,
@@ -155,9 +143,10 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
 
         const certificateId = uuidv4();
         const pdfFilename = `${certificateId}.pdf`;
-        const pdfPath = path.join(STORAGE_DIR, pdfFilename);
 
-        await fs.writeFile(pdfPath, pdfBuffer);
+        // Best-effort: the hash is already on chain and cannot be un-anchored,
+        // so a filesystem failure must not roll this transaction back.
+        const pdfPersisted = await writeCertificatePdf(pdfFilename, pdfBuffer);
 
         // Build additional_info JSON with new standardized fields
         const additionalInfo = {
@@ -193,11 +182,13 @@ async function issueCertificate(certificateData, txHash, issuerWalletFromToken) 
             ]
         );
 
-        await client.query(
-            `INSERT INTO certificate_files (certificate_id, file_type, file_path, file_size_bytes, mime_type)
+        if (pdfPersisted) {
+            await client.query(
+                `INSERT INTO certificate_files (certificate_id, file_type, file_path, file_size_bytes, mime_type)
        VALUES ($1, $2, $3, $4, $5)`,
-            [certificateId, 'PDF', pdfFilename, pdfBuffer.length, 'application/pdf']
-        );
+                [certificateId, 'PDF', pdfFilename, pdfBuffer.length, 'application/pdf']
+            );
+        }
 
         await client.query(
             `INSERT INTO audit_logs (user_id, action, resource_type, resource_id, result, metadata)

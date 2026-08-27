@@ -161,8 +161,11 @@ cd backend  && npm run dev     # http://localhost:<PORT>
 cd frontend && npm run dev     # http://localhost:5173
 ```
 
-Set `frontend/.env` with `VITE_API_URL=http://localhost:3000` (origin only, no
-`/api`, no trailing slash) and make sure the backend's `PORT` agrees.
+Locally, `frontend/.env` can leave `VITE_API_URL` unset — the Vite dev proxy
+forwards `/api` to `BACKEND_URL` (default `http://localhost:3000`; set it if the
+backend's `PORT` differs). For a deployed frontend, `VITE_API_URL` must be the
+backend **origin only**; the production build fails without it rather than
+shipping a bundle that calls localhost.
 
 ---
 

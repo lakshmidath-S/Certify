@@ -80,6 +80,7 @@ environment settings. Paste the Base64 as one unbroken line.
 | `DATABASE_URL` | Full connection string with `?sslmode=require` | ✅ |
 | `NODE_ENV` | `production` | |
 | `PORT` | Leave unset — Render injects it | |
+| `FRONTEND_URL` | Exact Vercel origin, e.g. `https://certify-frontend.vercel.app` | |
 | `JWT_SECRET` | ≥ 32 characters | ✅ |
 | `JWT_EXPIRES_IN` | `1h` | |
 | `RPC_URL` | `https://sepolia.base.org` | |
@@ -89,21 +90,41 @@ environment settings. Paste the Base64 as one unbroken line.
 | `ADMIN_WALLET_ADDRESS` | Address allowed to reach the admin login | |
 | `P12_BASE64` | Base64 of the `.p12` | ✅ |
 | `P12_PASSWORD` | Its passphrase | ✅ |
+| `CERT_STORAGE_DIR` | Optional — path of a mounted persistent disk | |
+| `DATABASE_SSL` | Optional — `true`/`false` to force the TLS decision | |
 
-Three things that will bite you here:
+Four things worth knowing here:
 
-- **`NODE_ENV=production` is load-bearing.** It switches the pg pool to SSL
-  (`rejectUnauthorized: false`) — managed Postgres will refuse the connection
-  without it — and stops stack traces appearing in error responses.
+- **Database TLS no longer depends on `NODE_ENV`.** `db/pool.js` derives it from
+  `DATABASE_URL`: on for any remote host, off for `localhost`, `sslmode=disable`
+  respected, `DATABASE_SSL` overriding all of it. Set `NODE_ENV=production`
+  anyway — it still keeps stack traces out of error responses.
 - **Don't set `PORT` yourself.** Render injects it; `server.js` reads
   `process.env.PORT`. Hardcoding it breaks health checks.
 - **The variable is `P12_BASE64`, not `P12_FILE_PATH`.** Signing reads the
   Base64 environment variable; there is no filesystem fallback. Paste the blob
   with no line breaks.
+- **`FRONTEND_URL` is the CORS allowlist.** Leaving it unset allows every origin
+  and logs a warning. Set it to the exact deployed frontend origin — scheme +
+  host, no path, no trailing slash. `CORS_ORIGINS` takes a comma-separated list
+  when you also need preview deployments.
 
-Boot will fail fast and loudly if `DATABASE_URL`, `JWT_SECRET`, `RPC_URL`, or
+Boot fails fast and loudly if `DATABASE_URL`, `JWT_SECRET`, `RPC_URL`, or
 either contract address is missing, or if `JWT_SECRET` is under 32 characters —
 check the logs for the exact list.
+
+A database that is merely unreachable does **not** stop the server. The port
+binds first, then the database is retried five times with backoff, so Render
+sees a live service and the logs name the real problem instead of failing the
+deploy with a port-scan timeout. `GET /api/health` reports which state you are
+in:
+
+```json
+{ "success": true, "database": "connected", "...": "..." }
+```
+
+`GET /` and `GET /health` return the same liveness payload, so any health-check
+path works.
 
 ### Ephemeral disk
 
@@ -114,8 +135,15 @@ JSON, so the on-chain hash still matches.
 
 The tradeoff is that **regenerated PDFs are not re-signed** — they verify by
 canonical JSON but fail a PKCS#7 signature check. If offline signature validity
-matters after a redeploy, attach a Render persistent disk mounted at
-`backend/storage`, or move storage to S3/R2.
+matters after a redeploy, attach a Render persistent disk and point
+`CERT_STORAGE_DIR` at its mount path (e.g. `/var/data/certificates`), or move
+storage to S3/R2.
+
+Writing the PDF is best-effort by design: the certificate hash is on chain
+before the file is written, so a read-only or full disk logs a warning and the
+certificate is still issued — it simply downloads through the regeneration
+path. Aborting there would have rolled back a row whose hash is already
+anchored, and re-issuing it would then fail forever as a duplicate.
 
 ### Cold starts
 
@@ -139,9 +167,17 @@ hit it interactively.
    | Variable | Value |
    | :--- | :--- |
    | `VITE_API_URL` | `https://certify-backend.onrender.com` |
+   | `VITE_CERT_REGISTRY_ADDRESS` | Optional — only if you redeployed the contracts |
 
-   Origin only — **no** `/api` suffix and **no** trailing slash. The axios client
-   appends `/api` itself, so `https://…/api` produces requests to `/api/api/…`.
+   Origin only. A trailing slash or an accidental `/api` suffix is now normalised
+   away instead of producing requests to `/api/api/…`.
+
+   **This variable is required for a production build.** `vite build` fails if it
+   is unset, or if it points at `localhost`. That misbuild used to succeed and
+   ship a bundle calling `http://localhost:3000` — which worked only on a machine
+   running the backend locally and failed for every other visitor of the same
+   URL. If the backend is proxied onto the frontend's own origin instead, set
+   this to `/`.
 
 4. **Deploy**.
 
@@ -158,21 +194,18 @@ requires a redeploy — not just a restart.
 
 Two things still point at old values after a first deploy:
 
-1. **CORS.** `backend/src/app.js` currently calls `app.use(cors())`, which
-   allows every origin — so it works immediately, and is not what you want
-   long-term. Restrict it:
+1. **CORS.** With `FRONTEND_URL` unset, `backend/src/app.js` allows every
+   origin — so a first deploy works immediately, and is not what you want
+   long-term. Set `FRONTEND_URL` on Render to the exact Vercel origin (no
+   trailing slash) and redeploy. Blocked origins are logged by name. No code
+   change is needed.
 
-   ```js
-   app.use(cors({ origin: process.env.FRONTEND_URL, credentials: true }));
-   ```
-
-   then add `FRONTEND_URL` to Render.
-
-2. **The hardcoded contract address.** `frontend/src/wallet/walletService.js`
-   embeds `CERT_REGISTRY_ADDRESS` directly. If you redeployed the contracts,
-   update it there as well as in the backend environment — otherwise issuance
-   anchors to the old registry while verification reads the new one, and every
-   certificate comes back `NOT_ON_CHAIN`.
+2. **The contract address.** `frontend/src/wallet/walletService.js` defaults to
+   the currently deployed `CertificateRegistry`. If you redeployed the
+   contracts, set `VITE_CERT_REGISTRY_ADDRESS` on Vercel to the new address as
+   well as `CONTRACT_CERT_REGISTRY` on Render — otherwise issuance anchors to
+   one registry while verification reads another, and every certificate comes
+   back `NOT_ON_CHAIN`.
 
 ---
 
@@ -209,10 +242,10 @@ If step 6 succeeds and step 7 returns `VALID`, every subsystem is working.
 | :--- | :--- |
 | Render logs `Missing required environment variables` | Exactly what it says — the log names them |
 | Render logs `JWT_SECRET must be at least 32 characters long` | Regenerate a longer secret |
-| `Failed to start server` immediately at boot | The startup `SELECT NOW()` failed — bad `DATABASE_URL`, or SSL is off because `NODE_ENV` isn't `production` |
-| Frontend calls `localhost:3000` in production | `VITE_API_URL` was unset **at build time** — set it and redeploy |
-| Requests 404 with a doubled `/api/api/` | `VITE_API_URL` includes `/api`; use the origin only |
-| CORS errors in the console | You restricted CORS but `FRONTEND_URL` doesn't match the exact deployed origin |
+| The site works for you but for nobody else, on the same URL | Almost always a bundle built with a `localhost` `VITE_API_URL` (now blocked at build time), or an `http://` `VITE_API_URL` on an `https://` page. The browser console names both |
+| `/api/health` reports `"database": "disconnected"` | The startup check exhausted its retries — bad `DATABASE_URL`, or the provider needs TLS (`?sslmode=require`, or `DATABASE_SSL=true`). The logs carry the driver's error |
+| `vite build` fails with `VITE_API_URL is not set` | Working as intended — set it on Vercel to the Render origin. Building without it used to ship a bundle that called `localhost` |
+| CORS errors in the console | `FRONTEND_URL` doesn't match the exact deployed origin. Render's logs print `Blocked CORS request from origin: …` with the origin it saw |
 | Hard refresh on `/verify` 404s | `vercel.json` missing or the root directory isn't `frontend` |
 | `P12_BASE64 environment variable is not set` | Variable missing, or still named `P12_FILE_PATH` |
 | Certificate issuance fails at the MetaMask step | Issuer wallet not mapped on chain, or out of Base Sepolia ETH |

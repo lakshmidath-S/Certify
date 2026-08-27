@@ -30,15 +30,27 @@ configuration is out of date.
 
 ```bash
 # frontend/.env
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=https://certify-backend.onrender.com
 ```
 
-`src/api/client.js` appends `/api` itself, so pass the **origin only**: no
-`/api` suffix, no trailing slash. If `VITE_API_URL` is unset the client falls
-back to `http://localhost:3000/api`.
+`src/config/api.js` resolves it once for every caller and appends `/api`, so
+pass the **origin only**. A trailing slash or an accidental `/api` suffix is
+normalised away rather than producing `/api/api/…`.
+
+For local development you can leave it unset: the client then targets `/api` on
+its own origin, which the Vite dev proxy forwards to the backend. There is
+deliberately **no localhost fallback** — a bundle that quietly pointed at
+`http://localhost:3000` worked only on a machine running the backend locally and
+was broken for every other visitor of the same URL. `npm run build` fails if
+`VITE_API_URL` is unset or points at localhost; set it to `/` if the backend is
+proxied onto this same origin.
 
 Vite inlines this at build time, so a change means a rebuild — on Vercel, a
 redeploy.
+
+`VITE_CERT_REGISTRY_ADDRESS` is optional: it overrides the `CertificateRegistry`
+address MetaMask anchors to, which otherwise defaults to the deployed one. It
+must match the backend's `CONTRACT_CERT_REGISTRY`.
 
 ### Run
 
@@ -48,8 +60,9 @@ npm run build     # production bundle → dist/
 npm run preview   # serve the build locally
 ```
 
-`vite.config.js` also proxies `/api` to `http://localhost:3000` in dev, which
-covers relative-path requests; the axios client uses `VITE_API_URL` directly.
+`vite.config.js` proxies `/api` to `http://localhost:3000` in dev (override with
+`BACKEND_URL`). With `VITE_API_URL` unset that proxy is what serves the API;
+with it set, the axios client calls that origin directly.
 
 ---
 
@@ -180,8 +193,8 @@ result row rather than an error.
 
 | Symptom | Fix |
 | :--- | :--- |
-| API calls hit `localhost:3000` in production | `VITE_API_URL` was unset at **build** time — set it and redeploy |
-| API calls 404 with a doubled `/api/api/` | `VITE_API_URL` includes `/api`; pass the origin only |
+| The site works for you but for nobody else | The bundle was built pointing at localhost, or at an `http://` API from an `https://` page. Both are called out in the browser console; the first now fails the build |
+| `npm run build` fails with `VITE_API_URL is not set` | Working as intended — set it to the backend origin, or to `/` for a same-origin proxy |
 | "MetaMask is not installed" | Extension missing or disabled; reload after installing |
 | Wrong network banner | Use the switch button — it adds Base Sepolia if it isn't in the wallet |
 | "Wallet not mapped. Contact admin." | An admin must run wallet map for that address first |
