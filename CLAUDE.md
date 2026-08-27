@@ -99,13 +99,27 @@ the working directory.
 - **`P12_BASE64`, not `P12_FILE_PATH`.** Signing reads the certificate from a
   Base64 env var; there is no filesystem fallback. Regenerate with
   `node generate-cert.js --write-env`.
-- **The contract address is hardcoded in the frontend.**
-  `frontend/src/wallet/walletService.js` embeds `CERT_REGISTRY_ADDRESS`. If
-  contracts are redeployed it must be updated alongside the backend env, or
+- **The contract address defaults in the frontend.**
+  `frontend/src/wallet/walletService.js` falls back to a hardcoded
+  `CERT_REGISTRY_ADDRESS`; `VITE_CERT_REGISTRY_ADDRESS` overrides it. If
+  contracts are redeployed it must be changed alongside the backend env, or
   issuance anchors to one registry while verification reads another.
-- **`VITE_API_URL` is the origin only** — no `/api`, no trailing slash; the
-  axios client appends `/api`. It is inlined at build time, so changes need a
-  rebuild.
+- **`VITE_API_URL` is the origin only** — a trailing slash or an accidental
+  `/api` is normalised away by `frontend/src/config/api.js`, which is the one
+  place any caller resolves the base URL. It is inlined at build time, so
+  changes need a rebuild, and `vite build` fails outright when it is unset or
+  points at localhost. There is deliberately no localhost fallback: that
+  fallback made a deploy work only from a machine running the backend locally.
+- **Database TLS comes from `DATABASE_URL`, not `NODE_ENV`.** `db/pool.js`
+  resolves it and strips the `sslmode`/`ssl` query parameters, because pg merges
+  a parsed connection string *over* the options object and would otherwise
+  silently override that decision.
+- **The server binds the port before it touches the database.** The DB is
+  verified in the background with backoff and reported by `/api/health`; do not
+  move that check back in front of `app.listen`.
+- **Certificate PDF writes are best-effort.** `certificates/storage.js` owns the
+  path (`CERT_STORAGE_DIR`) and never throws — the hash is anchored on chain
+  before the write, so a filesystem failure must not roll the transaction back.
 - **Issuance requires a registered student.** `POST /certificates/issue`
   resolves `ownerEmail` against `users` and fails if the student hasn't signed
   up yet.
@@ -131,5 +145,6 @@ values out of `.env` into any file or into terminal output.
 
 Tracked with impact in [ARCHITECTURE.md §11](ARCHITECTURE.md#11-known-gaps).
 The open blockers for production: OTPs are returned in the API response instead
-of emailed, CORS is fully open, there is no rate limiting, PDF storage is local
-disk, and certificate-level revocation has no API route.
+of emailed, CORS is open unless `FRONTEND_URL` is set, there is no rate
+limiting, PDF storage is local disk, and certificate-level revocation has no API
+route.

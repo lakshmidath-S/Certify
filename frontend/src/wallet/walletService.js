@@ -2,6 +2,22 @@ import { ethers } from 'ethers';
 
 const BASE_SEPOLIA_CHAIN_ID = '0x14a34';
 
+/**
+ * CertificateRegistry the browser anchors hashes to. This MUST be the same
+ * address as the backend's CONTRACT_CERT_REGISTRY — issuing against one
+ * registry while verification reads another makes every certificate come back
+ * NOT_ON_CHAIN. The default is the currently deployed registry; override it
+ * with VITE_CERT_REGISTRY_ADDRESS (inlined at build time) after a redeploy so
+ * this no longer needs a code edit.
+ */
+const CERT_REGISTRY_ADDRESS =
+    (import.meta.env.VITE_CERT_REGISTRY_ADDRESS ?? '').trim() ||
+    '0xb5B043baC7e5F734862Dcc9De25f6cc2bf171Ce9';
+
+const CERT_REGISTRY_ABI = [
+    'function storeCertificateHash(bytes32 hash) external',
+];
+
 export const walletService = {
     async connectWallet() {
         if (!window.ethereum) {
@@ -113,11 +129,6 @@ export const walletService = {
 
         const provider = new ethers.BrowserProvider(window.ethereum);
         const signer = await provider.getSigner();
-
-        const CERT_REGISTRY_ADDRESS = '0xb5B043baC7e5F734862Dcc9De25f6cc2bf171Ce9';
-        const CERT_REGISTRY_ABI = [
-            'function storeCertificateHash(bytes32 hash) external',
-        ];
 
         const contract = new ethers.Contract(CERT_REGISTRY_ADDRESS, CERT_REGISTRY_ABI, signer);
 

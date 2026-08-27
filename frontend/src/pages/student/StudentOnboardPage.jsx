@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, ChevronLeft } from 'lucide-react';
 import axios from 'axios';
-
-const API_BASE = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api` : 'http://localhost:3000/api';
+import { API_BASE_URL as API_BASE } from '../../config/api';
 
 export default function StudentOnboardPage() {
     const [step, setStep] = useState(1);

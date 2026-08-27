@@ -6,6 +6,7 @@ const walletAuthRoutes = require('../modules/walletAuth/routes');
 const walletRoutes = require('../modules/wallets/routes');
 const certificateRoutes = require('../modules/certificates/routes');
 const verificationRoutes = require('../modules/verification/routes');
+const health = require('../health');
 
 const router = express.Router();
 
@@ -18,9 +19,17 @@ router.use('/certificates', certificateRoutes);
 router.use('/verify', verificationRoutes);
 
 router.get('/health', (req, res) => {
+    const { databaseConnected, databaseError, databaseCheckedAt } = health.snapshot();
+
+    // Always 200: this is a liveness probe. Reporting the database as unhealthy
+    // here would make the host restart a process that is serving fine and would
+    // only reconnect to the same unreachable database.
     res.json({
         success: true,
         message: 'CERTIFY API is running',
+        database: databaseConnected ? 'connected' : 'disconnected',
+        ...(databaseError && { databaseError }),
+        ...(databaseCheckedAt && { databaseCheckedAt }),
         timestamp: new Date().toISOString()
     });
 });

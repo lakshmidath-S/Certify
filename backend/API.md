@@ -66,8 +66,20 @@ token expires after **5 minutes** and proves a live MetaMask signature — see
 ### `GET /health`
 
 ```json
-{ "success": true, "message": "CERTIFY API is running", "timestamp": "2026-08-26T10:00:00.000Z" }
+{
+  "success": true,
+  "message": "CERTIFY API is running",
+  "database": "connected",
+  "databaseCheckedAt": "2026-08-26T10:00:00.000Z",
+  "timestamp": "2026-08-26T10:00:00.000Z"
+}
 ```
+
+Always `200` — this is a liveness probe, so a database outage shows up as
+`"database": "disconnected"` (plus a `databaseError` string) rather than a
+failing status code. `GET /` and `GET /health`, outside the `/api` prefix,
+return the same liveness payload without the database fields, so any host's
+health-check path works.
 
 ---
 

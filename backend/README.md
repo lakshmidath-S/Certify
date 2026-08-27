@@ -84,6 +84,7 @@ or if `JWT_SECRET` is under 32 characters.
 DATABASE_URL=postgresql://user:password@host:5432/dbname?sslmode=require
 PORT=3000
 NODE_ENV=development
+FRONTEND_URL=            # exact browser origin allowed by CORS; unset = all
 
 JWT_SECRET=<at least 32 characters>
 JWT_EXPIRES_IN=1h
@@ -197,7 +198,15 @@ deployment that is reachable from the internet.
 ## Conventions
 
 **Responses.** `{ success: true, ... }` or `{ success: false, error }`. The
-error handler in `app.js` adds `stack` only when `NODE_ENV=development`.
+error handler in `app.js` adds `stack` only when `NODE_ENV` is not
+`production`.
+
+TLS for Postgres is decided in `db/pool.js` from `DATABASE_URL` — on for any
+remote host, off for `localhost`, `sslmode=disable` respected, `DATABASE_SSL`
+overriding all of it. It is not tied to `NODE_ENV`. The startup check no longer
+blocks `app.listen`: the port binds first and the database is retried five times
+with backoff, with the outcome reported by `GET /api/health` as
+`database: "connected" | "disconnected"`.
 
 **Transactions.** Anything touching the chain *and* the database uses
 `db.getClient()` with explicit `BEGIN` / `COMMIT` / `ROLLBACK` and a `finally`

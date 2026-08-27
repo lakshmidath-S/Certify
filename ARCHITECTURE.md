@@ -305,9 +305,18 @@ tamper that must be reported invalid.
 ### Download and regeneration
 
 `GET /certificates/:id/download` reads the stored PDF from
-`backend/storage/certificates/`. If the file is gone — the normal case on an
-ephemeral host — the controller **regenerates** it from `certificates` plus
-`additional_info`, reusing the canonical JSON so the on-chain hash still matches.
+`CERT_STORAGE_DIR` (default `backend/storage/certificates/`, resolved in
+`certificates/storage.js` — the one place that path is defined). If the file is
+gone — the normal case on an ephemeral host — the controller **regenerates** it
+from `certificates` plus `additional_info`, reusing the canonical JSON so the
+on-chain hash still matches.
+
+Writing the PDF at issue time is deliberately best-effort. By then the hash is
+already anchored on chain and that cannot be undone, so letting a read-only or
+full filesystem abort the transaction would roll the row back while leaving the
+hash on chain — and re-issuing would then fail forever as a duplicate hash. A
+failed write is logged, `certificate_files` gets no row, and download takes the
+regeneration path.
 
 Note that the regenerated PDF carries an empty signature placeholder: the
 regeneration path does not call `signPdfBuffer()`. It verifies through the
@@ -406,7 +415,10 @@ characters.
 
 | Variable | Consumer | Notes |
 | :--- | :--- | :--- |
-| `DATABASE_URL` | `db/pool.js` | SSL with `rejectUnauthorized: false` when `NODE_ENV=production` |
+| `DATABASE_URL` | `db/pool.js` | TLS is derived from this URL, **not** from `NODE_ENV`: on for any remote host, off for localhost, `sslmode=disable` respected |
+| `DATABASE_SSL` | `db/pool.js` | optional `true`/`false` override of that decision |
+| `FRONTEND_URL` / `CORS_ORIGINS` | `app.js` | exact allowed browser origins; unset means every origin is allowed |
+| `CERT_STORAGE_DIR` | `certificates/storage.js` | where issued PDFs are written; absolute, or relative to `backend/` |
 | `JWT_SECRET` | auth + signing tokens | ≥ 32 chars, enforced at boot |
 | `JWT_EXPIRES_IN` | access token | default `1h` |
 | `RPC_URL` | ethers provider | `https://sepolia.base.org` |
@@ -415,7 +427,8 @@ characters.
 | `ADMIN_WALLET_ADDRESS` | `POST /auth/verify-admin-wallet` | gate for the admin login screen |
 | `P12_BASE64` / `P12_PASSWORD` | `signPdf.js` | **secret**; the PDF signing identity |
 | `PORT` / `NODE_ENV` | server | see the port note below |
-| `VITE_API_URL` | frontend build | origin **without** `/api` and without a trailing slash |
+| `VITE_API_URL` | frontend build | origin **without** `/api` and without a trailing slash; the production build fails if it is unset or points at localhost |
+| `VITE_CERT_REGISTRY_ADDRESS` | frontend build | optional override of the hardcoded `CertificateRegistry`; must match `CONTRACT_CERT_REGISTRY` |
 
 ### How `.env` is resolved
 
@@ -434,7 +447,23 @@ directly, which is the right file for Hardhat.
 
 The port has a single source of truth: `config.server.port`
 (`process.env.PORT || 3000`), matching the frontend default and the Vite dev
-proxy.
+proxy. `server.js` binds `HOST` (default `0.0.0.0`) before it touches the
+database.
+
+### Startup order
+
+`server.js` opens the port first, then verifies the database in the background
+with five attempts and exponential backoff. Checking the database first and
+exiting on the first failure made a slow managed Postgres indistinguishable from
+a wrong `DATABASE_URL`, and on hosts that wait for the process to bind a port it
+failed the deploy with a port-scan timeout rather than a database error.
+
+`GET /api/health` always answers `200` — it is a liveness probe — and reports
+`database: "connected" | "disconnected"` from the state that check writes to
+`src/health.js`. Failing the probe on a database blip would only restart a
+process that then reconnects to the same unreachable database. `GET /` and
+`GET /health` answer the same liveness payload, so any host health-check path
+works.
 
 ---
 
@@ -445,7 +474,7 @@ Verified against the current tree. None of these are speculative.
 | # | Gap | Impact |
 | :--- | :--- | :--- |
 | 1 | `requestOTP()` returns the OTP in the HTTP response (`// REMOVE IN PRODUCTION`) and no email is actually sent | Anyone can register any email address. Blocking for production. |
-| 2 | `app.use(cors())` allows every origin; there is no rate limiting anywhere | OTP requests, login, and bulk verification are open to abuse. |
+| 2 | CORS defaults to allowing every origin when `FRONTEND_URL`/`CORS_ORIGINS` are unset; there is no rate limiting anywhere | OTP requests, login, and bulk verification are open to abuse. Set `FRONTEND_URL` to close the first half. |
 | 3 | `POST /certificates/issue` trusts the client's `txHash` without reading it back from the chain | A forged `txHash` creates a database row; verification still fails it as `NOT_ON_CHAIN`, so the damage is a junk row, not a fake credential. |
 | 4 | The download-regeneration path does not re-sign the PDF | Re-downloaded PDFs verify by canonical JSON but fail PKCS#7 signature checks. |
 | 5 | Certificate revocation has a contract function and database columns but no API route | Revoking one credential requires calling the contract directly. |
@@ -461,4 +490,8 @@ Verified against the current tree. None of these are speculative.
 | The root `.env` defined `P12_FILE_PATH` while `signPdf.js` reads `P12_BASE64`, so PDF signing threw | `generate-cert.js` now emits Base64 and can patch `.env` via `--write-env` |
 | Four entry points resolved `.env` from three different locations | All load through `src/config/loadEnv.js` |
 | `server.js` defaulted the port to 5000 while `config/env.js` and the frontend assumed 3000 | Single source of truth: `config.server.port` |
+| A frontend build without `VITE_API_URL` silently fell back to `http://localhost:3000/api`, so a deployment worked only from a machine running the backend locally and failed for every other visitor of the same URL | One `frontend/src/config/api.js` resolves and normalises the base URL for every caller, with no localhost fallback, and `vite.config.js` fails the production build when `VITE_API_URL` is unset or local |
+| The pg pool enabled TLS only when `NODE_ENV === 'production'`, so any host that did not set it connected in the clear and managed Postgres refused the connection at boot | TLS is derived from `DATABASE_URL` (with a `DATABASE_SSL` override); the ssl query parameters are stripped from the string so that decision is not silently overridden by pg's own parsing |
+| `server.js` pinged the database before `app.listen()` and exited on the first failure | The port binds first; the database is verified in the background with backoff, and `/api/health` reports the result |
+| The certificate storage path was hardcoded in both `certificates/service.js` and `certificates/controller.js`, and a failed PDF write rolled back a certificate already anchored on chain | Both read `certificates/storage.js`, which honours `CERT_STORAGE_DIR`; the write is best-effort |
 | Login matched `email` case-sensitively while `studentAuth` and `admin/create-issuer` stored it lowercased, so an account created as `Registrar@Example.edu` could not log in with that casing | All reads use `LOWER(email) = LOWER($1)`, all writes store lowercase, and a unique index on `LOWER(email)` makes case-variant duplicates impossible. Existing databases need `backend/migrations/2026-08-26-email-case-insensitive.sql` |

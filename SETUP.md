@@ -157,15 +157,20 @@ node scripts/check-schema.js     # prints the live `wallets` columns
 ## 6. Configure and run the frontend
 
 ```bash
-# frontend/.env
-VITE_API_URL=http://localhost:3000
+# frontend/.env  — optional for local development
+VITE_API_URL=
+BACKEND_URL=http://localhost:3000
 ```
 
-Origin only — **no** `/api` suffix and **no** trailing slash. The API client
-appends `/api` itself. It's inlined at build time, so changing it later means
-restarting the dev server.
+Locally you can leave `VITE_API_URL` empty: the client then calls `/api` on its
+own origin and the Vite dev proxy forwards that to `BACKEND_URL` (default
+`http://localhost:3000` — set it if the backend's `PORT` differs).
 
-Make sure this port matches the backend's `PORT`.
+To point the dev server straight at a deployed backend instead, set
+`VITE_API_URL` to its **origin only**; a trailing slash or an accidental `/api`
+suffix is normalised away. It is inlined at build time, so changing it means
+restarting the dev server — and `npm run build` refuses to produce a production
+bundle when it is unset or points at localhost.
 
 Run both, in two terminals:
 
@@ -270,11 +275,11 @@ working.
 | :--- | :--- |
 | `Missing required environment variables` | The log names them. Check `backend/.env` exists and is filled in |
 | `JWT_SECRET must be at least 32 characters long` | Regenerate with the command in §3 |
-| `Failed to start server` immediately | The startup DB ping failed — wrong `DATABASE_URL`, IP not allowlisted, or SSL mismatch. Hosted Postgres usually needs `?sslmode=require` |
+| Server starts but `/api/health` says `"database": "disconnected"` | The startup DB check exhausted its retries — wrong `DATABASE_URL`, IP not allowlisted, or the provider needs TLS. TLS is derived from the URL; force it with `DATABASE_SSL=true` |
 | `P12_BASE64 environment variable is not set` | Run `node generate-cert.js --write-env` (§4) |
 | `Cannot find module 'node-forge'` | `npm install` wasn't run in `backend/` |
-| Frontend calls `localhost:3000` but backend is elsewhere | `PORT` and `VITE_API_URL` disagree; restart the Vite dev server after changing `.env` |
-| Requests 404 with a doubled `/api/api/` | `VITE_API_URL` includes `/api` — use the origin only |
+| Frontend calls the wrong backend in dev | `BACKEND_URL` (the dev proxy target) and the backend's `PORT` disagree; restart the Vite dev server after changing `.env` |
+| A deployed frontend works for you but for nobody else | It was built with a localhost `VITE_API_URL`. Rebuild with the public backend origin — the build now rejects the localhost value |
 | `caller is not admin` when mapping a wallet | `DEPLOYER_PRIVATE_KEY` isn't the contracts' deployer. Deploy your own (§7) |
 | `Wallet not mapped. Contact admin.` | Step 3 hasn't been completed for that address |
 | `Wallet is not a valid issuer on blockchain` | The map transaction never confirmed, or the wallet was revoked |
